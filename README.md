@@ -113,7 +113,7 @@ inventory, and that is not a gap.
 The Overpass handling (mirror list, retries, refusing stale or implausibly
 small replies, the cache fallback, exit code 70) is the parks layer's; its
 README explains each piece. One tightening: a reply that carries no
-`timestamp_osm_base` at all is refused too, rather than dated today.
+`timestamp_osm_base` at all, or one with no time zone, is refused too, rather than dated today.
 `OSM_MIN_ELEMENTS` in [`src/config.py`](src/config.py) is 15,000, about half
 the first live reply (30,494 ways on 2026-10-09).
 
