@@ -13,7 +13,7 @@ from src import config
 
 # tile-join writes thousands of small files; doing that on the WSL filesystem
 # and copying the tree out afterwards is far faster than writing onto /mnt/c.
-WSL_PBF_DIR = "/tmp/guelph-buildings-vector-tiles"
+WSL_PBF_DIR = "/tmp/guelph-sidewalks-vector-tiles"
 
 
 def build_vector(slim_path=None):
@@ -33,11 +33,10 @@ def build_vector(slim_path=None):
         f"tippecanoe -o '{mbtiles_wsl}' "
         f"-Z{config.VECTOR_MINZOOM} -z{config.VECTOR_MAXZOOM} "
         f"--no-tile-size-limit --no-feature-limit "
-        # Without this, tippecanoe merges polygons under a pixel or so into
-        # stand-in squares at the low zooms -- every shed in a block becomes
-        # one blob, which is a lie on a layer whose point is outlines.
-        f"--no-tiny-polygon-reduction "
-        f"-l {config.VECTOR_LAYER_NAME} -n 'Guelph Buildings' "
+        # Keep every vertex at every zoom: a sidewalk's bends are what a
+        # mapper traces against, and the layer is small enough to afford it.
+        f"--no-line-simplification "
+        f"-l {config.VECTOR_LAYER_NAME} -n 'Guelph Sidewalks' "
         f"-A '{config.ATTRIBUTION}' --force '{slim_wsl}'"
     )
     print("Running tippecanoe ...")
