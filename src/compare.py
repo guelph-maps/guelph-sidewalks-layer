@@ -236,9 +236,11 @@ def _osm_base_time(data):
     """The same timestamp as an aware datetime, or None if absent or garbled."""
     stamp = ((data.get("osm3s") or {}).get("timestamp_osm_base") or "").strip()
     try:
-        return datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        when = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
     except ValueError:
         return None
+    # A stamp with no zone cannot be aged against UTC; treat it as garbled.
+    return when if when.tzinfo else None
 
 
 def _cache_date():
