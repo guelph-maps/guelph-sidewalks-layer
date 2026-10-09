@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guelph Buildings &mdash; OSM Coverage Gaps</title>
+<link rel="stylesheet" href="../index.css">
+<link rel="stylesheet" href="gaps.css">
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script defer src="gaps.js"></script>
+</head>
+<body class="app">
+
+<header class="bar">
+  <div class="bar-head">
+    <h1>Guelph Buildings &mdash; OSM coverage gaps</h1>
+    <a class="back" href="../">&larr; reference layer</a>
+    <a class="back" href="history.html">gaps over time &rarr;</a>
+  </div>
+  <div class="counts">
+    <div class="count missing"><strong>{{MISSING_COUNT}}</strong><span>missing in OSM</span></div>
+    <div class="count small"><strong>{{SMALL_COUNT}}</strong><span>under {{SMALL_AREA_M2}} m&sup2;, missing</span></div>
+    <div class="count plan"><strong>{{PLAN_COUNT}}</strong><span>from a site plan, missing</span></div>
+    <div class="count"><strong>{{CITY_COUNT}}</strong><span>City buildings</span></div>
+    <div class="count"><strong>{{OSM_COUNT}}</strong><span>OSM buildings</span></div>
+    <div class="count meta-count">City data {{DATA_DATE}} &middot; OSM data {{OSM_DATE}} &middot; compared {{BUILD_DATE}}</div>
+  </div>
+  {{OSM_NOTE}}
+  <p class="licence">
+    <a href="{{LICENSE_URL}}">{{LICENSE_NOTICE}}</a>
+    Source: <a href="{{DATASET_PAGE}}">Buildings</a>.
+  </p>
+</header>
+
+<div class="layout">
+  <div id="gap-map"
+       data-geojson="gaps.geojson"
+       data-raster="../tiles/raster/{z}/{x}/{y}.png"
+       data-raster-maxzoom="{{RASTER_MAXZOOM}}"></div>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <div class="controls">
+        <label><span class="swatch missing"></span>
+          <input type="checkbox" id="show-missing" checked> Missing</label>
+        <label><span class="swatch small"></span>
+          <input type="checkbox" id="show-small"> Small</label>
+        <label><span class="swatch plan"></span>
+          <input type="checkbox" id="show-plan" checked> Site plan</label>
+        <input type="search" id="filter" placeholder="Filter by id or source...">
+      </div>
+      <p class="hint">
+        Violet outlines are the City's buildings (raster layer); coloured dots
+        flag the ones with no OSM building on them, largest first. Click a row
+        to outline it on the map, then press <kbd>O</kbd> to open the spot on
+        openstreetmap.org or <kbd>I</kbd> in the iD editor (each row has the
+        same <strong>OSM&nbsp;&middot;&nbsp;iD</strong> link pair). Matching is
+        by spatial overlap &mdash; check current imagery before adding
+        anything: a site-plan outline may not be built yet.
+      </p>
+    </div>
+    <div class="table-scroll">
+      <table id="gap-table">
+        <thead>
+          <tr><th class="col-name">Building</th><th>Area</th>
+              <th>Source</th><th>Status</th><th>OSM &middot; iD</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>
