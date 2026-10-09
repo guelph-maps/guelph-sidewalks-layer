@@ -1,4 +1,4 @@
-// Guelph Buildings landing page: preview map + copy buttons.
+// Guelph Sidewalks landing page: preview map + copy buttons.
 
 (function () {
   "use strict";

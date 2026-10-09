@@ -20,10 +20,10 @@ def build_site():
     """Render index.html, copy assets and screenshots into build/site/."""
     os.makedirs(config.SITE_DIR, exist_ok=True)
 
-    building_count = "38,000+"
-    if os.path.isfile(config.COUNT_PATH):
-        with open(config.COUNT_PATH, encoding="utf-8") as f:
-            building_count = f"{int(f.read().strip()):,}"
+    # data/sidewalks.count.json is written by slim; before the first slim the
+    # page still renders, with the figures from the 2026-10-09 download.
+    counts = _load_json(config.COUNT_PATH)
+    summary = _load_json(config.GAPS_COUNT_PATH)
 
     build_date = date.today().isoformat()
 
@@ -43,11 +43,18 @@ def build_site():
         ),
         "{{BUILD_DATE}}": build_date,
         "{{DATA_DATE}}": _data_date(build_date),
-        "{{BUILDING_COUNT}}": building_count,
+        "{{LINE_COUNT}}": f"{counts.get('lines', 5245):,}",
+        "{{BUILT_KM}}": f"{counts.get('built_km', 715.8):,}",
+        # The landing page links to the gap page by its headline figure; with
+        # no comparison yet there is no figure, and the link says so instead.
+        "{{UNTRACED_KM}}": (f"{summary['untraced_km']:,}"
+                            if "untraced_km" in summary else "?"),
+        "{{MATCH_M}}": f"{config.MATCH_M:.0f}",
         "{{RASTER_MINZOOM}}": str(min(config.RASTER_ZOOMS)),
         "{{RASTER_MAXZOOM}}": str(max(config.RASTER_ZOOMS)),
+        "{{VECTOR_MINZOOM}}": str(config.VECTOR_MINZOOM),
         "{{VECTOR_MAXZOOM}}": str(config.VECTOR_MAXZOOM),
-        "{{SMALL_AREA_M2}}": str(config.SMALL_AREA_M2),
+        "{{VECTOR_LAYER_NAME}}": config.VECTOR_LAYER_NAME,
         "{{GITHUB_REPO}}": config.GITHUB_REPO,
         "{{DATASET_PAGE}}": config.DATASET_PAGE,
         "{{LICENSE_URL}}": config.LICENSE_URL,
@@ -84,10 +91,9 @@ def _build_gaps_page(build_date):
     gaps_dir = os.path.join(config.SITE_DIR, "gaps")
     os.makedirs(gaps_dir, exist_ok=True)
 
-    summary = {}
-    if os.path.isfile(config.GAPS_COUNT_PATH):
-        with open(config.GAPS_COUNT_PATH, encoding="utf-8") as f:
-            summary = json.load(f)
+    summary = _load_json(config.GAPS_COUNT_PATH)
+    untraced = summary.get("untraced_km", 0)
+    far = summary.get("far_km", 0)
 
     with open(os.path.join(config.ASSETS_DIR, "gaps.html.tmpl"),
               encoding="utf-8") as f:
@@ -96,13 +102,37 @@ def _build_gaps_page(build_date):
         "{{PAGES_URL}}": config.PAGES_URL,
         "{{BUILD_DATE}}": build_date,
         "{{DATA_DATE}}": _data_date(build_date),
+        "{{UNTRACED_KM}}": f"{untraced:,}",
+        "{{FAR_KM}}": f"{far:,}",
+        "{{REMOTE_KM}}": f"{summary.get('remote_km', 0):,}",
+        # The honest range: the untraced figure less the part that sits just
+        # beyond the match radius (most likely a City offset, not a missing
+        # sidewalk), rounded out to 5 km so the page claims no false precision.
+        "{{HONEST_LOW_KM}}": str(int(max(untraced - far, 0) // 5 * 5)),
+        "{{HONEST_HIGH_KM}}": str(int(-(-untraced // 5) * 5)),
+        "{{STREETS}}": f"{summary.get('streets', 0):,}",
+        "{{STREET_MIN_KM}}": f"{config.STREET_MIN_KM:g}",
         "{{MISSING_COUNT}}": f"{summary.get('missing', 0):,}",
-        "{{SMALL_COUNT}}": f"{summary.get('small', 0):,}",
-        "{{PLAN_COUNT}}": f"{summary.get('plan', 0):,}",
-        "{{SMALL_AREA_M2}}": str(config.SMALL_AREA_M2),
-        "{{RASTER_MAXZOOM}}": str(max(config.RASTER_ZOOMS)),
+        "{{PARTIAL_COUNT}}": f"{summary.get('partial', 0):,}",
+        "{{FAR_COUNT}}": f"{summary.get('far', 0):,}",
+        "{{SAYS_NO_COUNT}}": f"{summary.get('road_says_no', 0):,}",
+        "{{UNTAGGED_COUNT}}": f"{summary.get('untagged', 0):,}",
+        "{{ON_ROAD_COUNT}}": f"{summary.get('on_road_tag', 0):,}",
+        "{{PROPOSED_COUNT}}": f"{summary.get('proposed', 0):,}",
+        "{{NOSURFACE_COUNT}}": f"{summary.get('nosurface', 0):,}",
+        # The City's own length (Shape__Length, as the landing page quotes it),
+        # not the sampled total, which reprojection moves by ~0.1 km.
+        "{{CITY_KM}}": f"{_load_json(config.COUNT_PATH).get('built_km', summary.get('city_km', 0)):,}",
         "{{CITY_COUNT}}": f"{summary.get('city', 0):,}",
-        "{{OSM_COUNT}}": f"{summary.get('osm_rings', 0):,}",
+        "{{OSM_COUNT}}": f"{summary.get('osm_sidewalk_ways', 0):,}",
+        # The matching rule, stated on the page from the values that ran it.
+        "{{SAMPLE_STEP_M}}": f"{config.SAMPLE_STEP_M:g}",
+        "{{MATCH_M}}": f"{config.MATCH_M:.0f}",
+        "{{FAR_M}}": f"{config.FAR_M:.0f}",
+        "{{REMOTE_M}}": f"{config.REMOTE_M:.0f}",
+        "{{MATCHED_PCT}}": f"{config.MATCHED_SHARE:.0%}",
+        "{{PARTIAL_PCT}}": f"{config.PARTIAL_SHARE:.0%}",
+        "{{RASTER_MAXZOOM}}": str(max(config.RASTER_ZOOMS)),
         "{{OSM_DATE}}": summary.get("osm_date", build_date),
         "{{OSM_NOTE}}": _osm_note(summary),
         "{{GITHUB_REPO}}": config.GITHUB_REPO,
@@ -145,9 +175,11 @@ def _build_history_page(gaps_dir, build_date):
         "{{GITHUB_REPO}}": config.GITHUB_REPO,
         "{{RUN_COUNT}}": f"{len(rows):,}",
         "{{FIRST_DATE}}": rows[0]["date"] if rows else build_date,
+        "{{MATCH_M}}": f"{config.MATCH_M:.0f}",
+        "{{STREET_MIN_KM}}": f"{config.STREET_MIN_KM:g}",
         "{{HISTORY_JSON}}": json.dumps(rows),
         "{{HISTORY_ROWS}}": "\n".join(_history_row(r) for r in reversed(rows)),
-        # Only counts, but counts of the City's buildings, and like the gap page
+        # Only counts, but counts of the City's sidewalks, and like the gap page
         # this can be the one page a reader opens: it carries the notice too.
         "{{LICENSE_URL}}": config.LICENSE_URL,
         "{{LICENSE_NOTICE}}": config.LICENSE_NOTICE,
@@ -174,7 +206,7 @@ def _osm_note(summary):
 
     The gap list is only worth acting on if both sides are fresh, and the OSM
     side is the one that moves daily. A page dated today whose OSM data is two
-    weeks old sends a mapper to add a building somebody else already added.
+    weeks old sends a mapper to trace a sidewalk somebody else already traced.
     """
     if not summary.get("osm_stale"):
         return ""
@@ -184,6 +216,14 @@ def _osm_note(summary):
         f'these gaps were computed against OSM data from <strong>{when}</strong>. '
         'Anything mapped since then still shows as a gap.</p>'
     )
+
+
+def _load_json(path):
+    """A JSON file's contents, or {} when the step that writes it has not run."""
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
 
 
 def _data_date(fallback):

@@ -1,14 +1,22 @@
-// Gap history page: a three-series line chart of the recorded compare runs,
-// drawn as inline SVG from the rows embedded in the page. Same colours as the
-// gap map's markers, so "missing" is the same purple here and there.
+// Gap history page: line charts of the recorded compare runs, drawn as inline
+// SVG from the rows embedded in the page. Two charts, not one: untraced km
+// (~70) and segment counts (~20 to ~300) on one axis would flatten whichever
+// is smaller, and a second axis invites reading the lines against each other.
+// Same colours as the gap map's lines, so "missing" is the same magenta here
+// and there.
 
 (function () {
   "use strict";
 
-  var SERIES = [
-    { key: "missing", label: "Missing in OSM", short: "missing", color: "#c2255c" },
-    { key: "small", label: "Small, missing", short: "small", color: "#868e96" },
-    { key: "plan", label: "Site plan, missing", short: "site plan", color: "#e8590c" },
+  var KM_SERIES = [
+    { key: "untraced_km", label: "Untraced km", short: "km", color: "#c2255c" },
+  ];
+  var COUNT_SERIES = [
+    { key: "missing", label: "Missing", short: "missing", color: "#c2255c" },
+    { key: "partial", label: "Partial", short: "partial", color: "#f08c00" },
+    { key: "far", label: "Far", short: "far", color: "#7048e8" },
+    { key: "road_says_no", label: "Road says no", short: "says no", color: "#e03131" },
+    { key: "untagged", label: "Untagged footway", short: "untagged", color: "#1c7ed6" },
   ];
   var W = 860, H = 320;
   var M = { top: 16, right: 150, bottom: 36, left: 48 };
@@ -17,11 +25,16 @@
   var NS = "http://www.w3.org/2000/svg";
 
   function init() {
-    var holder = document.getElementById("chart");
     var raw = document.getElementById("history-data");
     var rows = [];
     try { rows = JSON.parse(raw.textContent) || []; } catch (e) { rows = []; }
-    legend(document.getElementById("legend"));
+    chart("km", KM_SERIES, rows, fmtKm);
+    chart("counts", COUNT_SERIES, rows, fmt);
+  }
+
+  function chart(name, series, rows, format) {
+    var holder = document.getElementById("chart-" + name);
+    legend(document.getElementById("legend-" + name), series);
     if (!rows.length) {
       var p = document.createElement("p");
       p.className = "empty";
@@ -30,11 +43,11 @@
       holder.appendChild(p);
       return;
     }
-    draw(holder, rows);
+    draw(holder, rows, series, format);
   }
 
-  function legend(el) {
-    SERIES.forEach(function (s) {
+  function legend(el, series) {
+    series.forEach(function (s) {
       var span = document.createElement("span");
       var i = document.createElement("i");
       i.style.borderColor = s.color;
@@ -44,22 +57,26 @@
     });
   }
 
-  function draw(holder, rows) {
+  function draw(holder, rows, series, fmtV) {
     var xs = rows.map(function (r) { return Date.parse(r.date + "T00:00:00Z"); });
     var x0 = xs[0], x1 = xs[xs.length - 1];
     if (x1 === x0) { x0 -= 7 * 864e5; x1 += 7 * 864e5; }
     var maxY = 0;
     rows.forEach(function (r) {
-      SERIES.forEach(function (s) { maxY = Math.max(maxY, r[s.key] || 0); });
+      series.forEach(function (s) { maxY = Math.max(maxY, r[s.key] || 0); });
     });
     var step = niceStep(maxY || 1);
     var yTop = Math.max(step, Math.ceil(maxY / step) * step);
+    // Tick values are multiples of a step that may be fractional (0.5 km);
+    // round off the float drift so the labels stay short.
+    var ticks = Math.round(yTop / step);
     var plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
     var sx = function (t) { return M.left + (t - x0) / (x1 - x0) * plotW; };
     var sy = function (v) { return M.top + plotH - v / yTop * plotH; };
 
     var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
-      "aria-label": "Gap counts per comparison run; the table below has the values" });
+      "aria-label": series.map(function (s) { return s.label; }).join(", ") +
+        " per comparison run; the table below has the values" });
 
     // Shade each run of reconstructed weeks, so the chart says which points
     // the weekly build saw and which were rebuilt from OSM's history.
@@ -71,9 +88,11 @@
     });
 
     // Gridlines + y ticks (recessive), x ticks at month starts.
-    for (var v = 0; v <= yTop; v += step) {
+    for (var k = 0; k <= ticks; k++) {
+      var v = +(k * step).toPrecision(6);
       svg.appendChild(el("line", { "class": "grid", x1: M.left, x2: W - M.right,
         y1: sy(v), y2: sy(v) }));
+      // Plain fmt, not fmtV: an axis reads "20", not "20.0".
       svg.appendChild(text(M.left - 8, sy(v) + 4, fmt(v), "axis", "end"));
     }
     monthStarts(x0, x1).forEach(function (t) {
@@ -86,13 +105,13 @@
     });
 
     // Lines, then points (a 2px surface ring keeps them legible where they cross).
-    SERIES.forEach(function (s) {
+    series.forEach(function (s) {
       var d = rows.map(function (r, i) {
         return (i ? "L" : "M") + sx(xs[i]).toFixed(1) + " " + sy(r[s.key] || 0).toFixed(1);
       }).join(" ");
       svg.appendChild(el("path", { "class": "series", d: d, stroke: s.color }));
     });
-    SERIES.forEach(function (s) {
+    series.forEach(function (s) {
       rows.forEach(function (r, i) {
         svg.appendChild(el("circle", { "class": "pt", r: 4, fill: s.color,
           cx: sx(xs[i]), cy: sy(r[s.key] || 0) }));
@@ -101,7 +120,7 @@
 
     // Direct end labels: the latest value of each series, nudged apart.
     var last = rows[rows.length - 1];
-    var ends = SERIES.map(function (s) {
+    var ends = series.map(function (s) {
       return { s: s, y: sy(last[s.key] || 0), v: last[s.key] || 0 };
     }).sort(function (a, b) { return a.y - b.y; });
     for (var i = 1; i < ends.length; i++) {
@@ -111,7 +130,7 @@
       var x = W - M.right + 10;
       svg.appendChild(el("line", { x1: x, x2: x + 14, y1: e.y, y2: e.y,
         stroke: e.s.color, "stroke-width": 2, "stroke-linecap": "round" }));
-      svg.appendChild(text(x + 20, e.y + 4, fmt(e.v) + " " + e.s.short,
+      svg.appendChild(text(x + 20, e.y + 4, fmtV(e.v) + " " + e.s.short,
         "end-label", "start"));
     });
 
@@ -122,7 +141,7 @@
     var hit = el("rect", { "class": "hit", x: M.left, y: M.top, width: plotW, height: plotH });
     svg.appendChild(hit);
     holder.appendChild(svg);
-    var tip = document.getElementById("tip");
+    var tip = holder.querySelector(".tip");
 
     function nearest(clientX) {
       var box = svg.getBoundingClientRect();
@@ -145,12 +164,12 @@
       head.textContent = r.date + (r.source === "attic" ? " (reconstructed)" : "") +
         (r.osm_date && r.osm_date !== r.date ? " · OSM " + r.osm_date : "");
       tip.appendChild(head);
-      SERIES.forEach(function (s) {
+      series.forEach(function (s) {
         var line = document.createElement("div");
         var key = document.createElement("i");
         key.style.borderColor = s.color;
         var val = document.createElement("strong");
-        val.textContent = fmt(r[s.key] || 0);
+        val.textContent = fmtV(r[s.key] || 0);
         line.appendChild(key);
         line.appendChild(val);
         line.appendChild(document.createTextNode(" " + s.short));
@@ -204,6 +223,8 @@
   }
 
   function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+  function fmtKm(n) { return fmt((Math.round(n * 10) / 10).toFixed(1)); }
 
   function el(tag, attrs) {
     var e = document.createElementNS(NS, tag);

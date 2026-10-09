@@ -23,7 +23,7 @@ km). It never asked whether they are the same sidewalks, and 42 km of OSM's
 are on campus and private sites the City does not inventory, which pads the
 ratio. Measured by location, on the first run here (2026-10-09):
 
-- **70.5 km** of the City's 715.9 km of built sidewalk has no OSM pedestrian
+- **70.5 km** of the City's 715.8 km of built sidewalk has no OSM pedestrian
   line within 15 m and no road tag claiming one; **50.7 km** has nothing
   within 50 m.
 - It runs along streets whose roads are mapped. 100 streets have at least

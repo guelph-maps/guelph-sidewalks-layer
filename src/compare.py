@@ -34,8 +34,8 @@ matched, and is not listed otherwise. Only City -> OSM is compared: OSM's
 campus and private-site sidewalks, which the City does not inventory, are not
 reported.
 
-Gap segments carry the name of the OSM road nearest most of their untraced
-length, so the page can lead with streets rather than with segments. Matching
+Listed segments carry the name of the OSM road nearest most of their
+untraced length (or of their whole length, when all of it is covered), so the page can lead with streets rather than with segments. Matching
 runs in UTM 17N metres with shapely's STRtree; a flaky Overpass falls back to
 the cached reply, but only after every mirror has been tried several times --
 see _load_osm.
@@ -344,14 +344,15 @@ def match(city, osm):
     pts, weights, owner = _sample(city)
     cls, way = classify(pts, osm)
 
-    # Untraced samples (built, uncovered) are attributed to the nearest named
-    # road, for the street totals.
+    # Every sample is attributed to the nearest named road, so each listed
+    # segment can be filed under a street.
     named = [w for w in osm["road"] if w["tags"].get("name")]
     street_idx = _nearest(pts, [w["g"] for w in named], config.STREET_M)[0]
 
     per = [defaultdict(float) for _ in city]
     ways = [defaultdict(Counter) for _ in city]
-    streets = [Counter() for _ in city]
+    streets = [Counter() for _ in city]       # all samples
+    streets_gap = [Counter() for _ in city]   # untraced samples only
     totals = Counter()
     remote_m = 0.0
     built = np.array([c["props"].get("status") == "built" for c in city])
@@ -366,8 +367,11 @@ def match(city, osm):
             totals[c] += w
             if c not in COVERED and near_any[k] < 0:
                 remote_m += w
-        if c not in COVERED and street_idx[k] >= 0:
-            streets[i][named[street_idx[k]]["tags"]["name"]] += w
+        if street_idx[k] >= 0:
+            name = named[street_idx[k]]["tags"]["name"]
+            streets[i][name] += w
+            if c not in COVERED:
+                streets_gap[i][name] += w
 
     has_surface = {w["id"] for w in osm["sidewalk"] if w["tags"].get("surface")}
     gaps = []
@@ -381,7 +385,10 @@ def match(city, osm):
         counts[status] += 1
         length = sum(per[i].values())
         untraced = length - sum(per[i][k] for k in COVERED)
-        street = streets[i].most_common(1)[0][0] if streets[i] else ""
+        # Named for where the gap is when there is one, else for the whole
+        # segment: an untagged footway still belongs to a street.
+        named_by = streets_gap[i] or streets[i]
+        street = named_by.most_common(1)[0][0] if named_by else ""
         if status in GAP_STATUSES:
             street_m[street] += untraced
         gaps.append(_gap_feature(c, status, length, untraced, street,

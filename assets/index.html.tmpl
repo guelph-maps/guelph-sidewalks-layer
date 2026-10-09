@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Guelph Buildings &mdash; Reference Layer for OSM Editors</title>
+<title>Guelph Sidewalks &mdash; Reference Layer for OSM Editors</title>
 <link rel="stylesheet" href="index.css">
 <link rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -17,11 +17,11 @@
 <body>
 <main>
 
-<h1>Guelph Buildings</h1>
+<h1>Guelph Sidewalks</h1>
 <p class="lead">
-  A reference layer of the building outlines published by the City of Guelph
-  &mdash; <strong>{{BUILDING_COUNT}}</strong> footprints, almost all traced from
-  the City's own high-resolution aerial photography &mdash; ready to add to the
+  A reference layer of the sidewalks published by the City of Guelph &mdash;
+  <strong>{{LINE_COUNT}}</strong> lines from the City's Sidewalks layer,
+  <strong>{{BUILT_KM}} km</strong> of them built &mdash; ready to add to the
   <a href="https://www.openstreetmap.org">OpenStreetMap</a> editors
   <strong>iD</strong> and <strong>JOSM</strong> while you map.
 </p>
@@ -29,7 +29,7 @@
 
 <div class="attribution">
   <a href="{{LICENSE_URL}}">{{LICENSE_NOTICE}}</a>
-  Source: <a href="{{DATASET_PAGE}}">Buildings</a>.
+  Source: <a href="{{DATASET_PAGE}}">Sidewalks</a> (OpenData2/FeatureServer/0).
 </div>
 
 <h2>Preview</h2>
@@ -37,28 +37,31 @@
      data-minzoom="{{RASTER_MINZOOM}}" data-maxzoom="{{RASTER_MAXZOOM}}"></div>
 <p class="meta">
   The raster layer drawn over OpenStreetMap, from zoom {{RASTER_MINZOOM}}:
-  <span style="color:#5f3dc4">violet</span> outlines were traced from aerial
-  photography, <span style="color:#e8590c">orange</span> ones drawn from a site
-  plan.
+  <span style="color:#15aabf">cyan</span> lines are built sidewalks,
+  <span style="color:#e8590c">orange</span> ones proposed.
 </p>
 
 <div class="attribution">
-  <strong>Coverage vs OpenStreetMap:</strong> see which City buildings have
-  <a href="gaps/">no OSM building on them</a> &mdash; a mapper's worklist with
-  an interactive map and table.
+  <strong>Coverage vs OpenStreetMap:</strong>
+  <a href="gaps/">{{UNTRACED_KM}} km of City sidewalk</a> has no OSM line
+  within {{MATCH_M}}&nbsp;m &mdash; a mapper's worklist, street by street,
+  with an interactive map.
 </div>
 
 <h2>Two layers &mdash; which to use</h2>
 <table>
   <tr>
     <th>Vector layer</th>
-    <td>Interactive. Click an outline to read its tags
-        (<code>bldid</code>, <code>source</code>, <code>area</code> in
-        m&sup2;). Best in <strong>iD</strong>.</td>
+    <td>Interactive. Click a line to read its tags (layer
+        <code>{{VECTOR_LAYER_NAME}}</code>: <code>id</code>,
+        <code>status</code>, <code>surface</code>, <code>width</code> in m,
+        <code>installed</code> year, <code>length</code> in m). Zooms
+        {{VECTOR_MINZOOM}}&ndash;{{VECTOR_MAXZOOM}}. Best in
+        <strong>iD</strong>.</td>
   </tr>
   <tr>
     <th>Raster layer</th>
-    <td>Outlines drawn directly on the tiles. A tracing backdrop over aerial
+    <td>Lines drawn directly on the tiles. A tracing backdrop over aerial
         imagery. Best in <strong>JOSM</strong>.</td>
   </tr>
 </table>
@@ -70,7 +73,7 @@
   <li>Under <em>Custom Map Data</em>, open the settings and paste this URL:</li>
 </ol>
 <pre class="url">{{VECTOR_URL}}</pre>
-<p>Zoom in, then click any outline to see its tags in the inspector.</p>
+<p>Zoom in, then click any line to see its tags in the inspector.</p>
 
 <h3>Raster layer</h3>
 <ol>
@@ -92,7 +95,7 @@
 </ol>
 <pre class="url">tms[{{RASTER_MINZOOM}},{{RASTER_MAXZOOM}}]:{{RASTER_URL_JOSM}}</pre>
 <p>
-  Give it a name such as <em>Guelph Buildings</em>, click OK, then enable it
+  Give it a name such as <em>Guelph Sidewalks</em>, click OK, then enable it
   from the <em>Imagery</em> menu above your aerial imagery. Note JOSM's
   placeholder is <code>{zoom}</code>, not <code>{z}</code>.
 </p>
@@ -106,25 +109,32 @@
 
 <h2>Notes</h2>
 <ul>
-  <li>Every building the City publishes is drawn. The City's
-      <code>SOURCE</code> field says how each was captured: all but a few
-      hundred were traced from aerial photography; the rest (orange) were
-      drawn from a submitted site plan, so the building may not be built yet,
-      or not as drawn.</li>
-  <li>The City captures outbuildings down to a few square metres. Sheds and
-      garages are in the layer; whether they belong in OSM is your call.</li>
+  <li>Guelph maps its sidewalks as separate ways
+      (<code>highway=footway</code> + <code>footway=sidewalk</code>), not as
+      <code>sidewalk=*</code> tags on the road, so tracing from this layer
+      follows the local convention. Where a road already carries
+      <code>sidewalk=*</code>, that is a valid way to map it too.</li>
+  <li>Tracing a sidewalk at a time from imagery, with this layer as a guide,
+      is ordinary mapping. Copying the City's lines into OSM by script would
+      be an import, and needs an import proposal and community discussion
+      first.</li>
+  <li>The City states its sidewalks are accurate to 1&ndash;5 m; the imagery
+      decides where a line goes. Proposed sidewalks (orange) may not have
+      been poured yet.</li>
   <li>Vector tiles are pre-rendered through zoom {{VECTOR_MAXZOOM}}; raster
       tiles for z{{RASTER_MINZOOM}}&ndash;{{RASTER_MAXZOOM}} (the editor
       overzooms them further).</li>
   <li>Tiles are refreshed weekly from the City's service.</li>
   <li>This is a <strong>reference</strong> layer &mdash; check it against
       current imagery before copying anything into OpenStreetMap. Where a
-      building in OSM already exists, improve it in place rather than
+      sidewalk in OSM already exists, improve it in place rather than
       replacing it, so its history and tags survive.</li>
 </ul>
 
 <footer>
   <a href="https://github.com/{{GITHUB_REPO}}">Project source on GitHub</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://guelph-maps.github.io/guelph-buildings-layer/">Guelph buildings layer</a>
   &nbsp;&middot;&nbsp;
   <a href="https://guelph-maps.github.io/guelph-parks-layer/">Guelph parks layer</a>
   &nbsp;&middot;&nbsp;

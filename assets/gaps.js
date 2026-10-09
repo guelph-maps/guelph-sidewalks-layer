@@ -1,27 +1,54 @@
-// Gap-review page: City raster layer + gap markers, driven by a side table.
+// Gap-review page: City raster layer + gap segments, driven by a street table.
 //
-// The parks layer's page, for a list a hundred times longer: markers draw on
-// a canvas (preferCanvas) rather than as thousands of SVG nodes, and the table
-// is sorted largest building first, since a missing plaza is worth more than
-// a missing garage.
+// The buildings layer's page, for lines. Two things change. The segments are
+// drawn as polylines coloured by status (on a canvas, preferCanvas, since the
+// off-by-default statuses add a few thousand of them). And the table leads
+// with streets, not segments: a mapper walks or traces a street at a time,
+// and 3,000 rows of 80 m segments say nothing about where the work is. A
+// street's row expands into its segment rows.
 
 (function () {
   "use strict";
 
-  var COLORS = { missing: "#c2255c", small: "#868e96", plan: "#e8590c" };
+  // Order is the checkbox / count-chip order. Default-on statuses first.
+  var STATUSES = ["missing", "partial", "far", "road_says_no", "untagged",
+                  "on_road_tag", "proposed", "nosurface"];
+  var COLORS = {
+    missing: "#c2255c", partial: "#f08c00", far: "#7048e8",
+    road_says_no: "#e03131", untagged: "#1c7ed6", on_road_tag: "#868e96",
+    proposed: "#e8590c", nosurface: "#ced4da",
+  };
+  var LABELS = {
+    missing: "missing", partial: "partial", far: "far",
+    road_says_no: "road says no", untagged: "untagged", on_road_tag: "on road tag",
+    proposed: "proposed", nosurface: "no surface",
+  };
+  // A street's total counts only these: untraced length a mapper can add.
+  // "untagged" etc. are covered already, so their `untraced` is not work.
+  var GAP = { missing: 1, partial: 1, far: 1, road_says_no: 1 };
+  var NONAME = "(no named road nearby)";
+  var WEIGHT = 4, SELECTED_WEIGHT = 8;
+
   var map;
   var features = [];
-  var markers = [];      // CircleMarker per feature, indexed like features
-  var highlight = null;  // outline of the currently selected gap
-  var selectedRow = null;
+  var lines = [];        // L.Polyline per feature, indexed like features
+  var streets = [];      // {name, km, counts, idx: [feature index...]}
+  var streetOf = [];     // feature index -> street index
+  var expanded = {};     // street index -> true while its segments are listed
+  var hits = [];         // feature index -> passes the status + text filter
+  var selectedRow = null, selectedStreetRow = null;
   var selectedIndex = null;  // feature index of the current selection
+  var apply = function () {};
 
   function init() {
     var el = document.getElementById("gap-map");
     if (!el || typeof L === "undefined" || !el.dataset.geojson) {
       return;
     }
-    map = L.map(el, { preferCanvas: true }).setView([43.5448, -80.2482], 13);
+    // A wider hit tolerance than the canvas default: a 4 px line is a hard
+    // target, and most clicks here are meant for one.
+    map = L.map(el, { preferCanvas: true, renderer: L.canvas({ tolerance: 6 }) })
+      .setView([43.5448, -80.2482], 13);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution:
@@ -50,70 +77,107 @@
     features = data.features || [];
 
     features.forEach(function (f, i) {
-      f.properties._i = i;
-      var center = centroid(f.geometry);
-      f._center = center;
-      var m = L.circleMarker(center, {
-        radius: 5,
-        color: "#fff",
-        weight: 1,
-        fillColor: COLORS[f.properties.status] || "#888",
-        fillOpacity: 0.95,
+      var g = f.geometry;
+      f._mid = midpoint(g);
+      var latlngs = L.GeoJSON.coordsToLatLngs(g.coordinates,
+        g.type === "MultiLineString" ? 1 : 0);
+      var line = L.polyline(latlngs, {
+        color: COLORS[f.properties.status] || "#888",
+        weight: WEIGHT,
+        opacity: 0.9,
       });
-      m.bindPopup(function () { return popupHtml(f); });
-      m.on("click", function () { select(i, false); });
-      markers[i] = m;
+      line.bindPopup(function () { return popupHtml(f); });
+      line.on("click", function (ev) {
+        L.DomEvent.stopPropagation(ev);
+        select(i, false, ev.latlng);
+      });
+      lines[i] = line;
     });
 
+    groupStreets();
     buildTable();
     wireControls();
   }
 
-  // Centroid of a (Multi)Polygon's largest outer ring -> [lat, lng]. Taken
-  // relative to the ring's first vertex: summed raw at lon/lat, a building's
-  // cross-products lose the centroid to float cancellation.
-  function centroid(geom) {
-    var rings = geom.type === "Polygon"
-      ? [geom.coordinates[0]]
-      : geom.coordinates.map(function (poly) { return poly[0]; });
-    var best = rings[0], bestArea = -1;
-    rings.forEach(function (r) {
-      var a = Math.abs(ringArea(r));
-      if (a > bestArea) { bestArea = a; best = r; }
+  // One group per OSM road name. Its km is the untraced length of its gap
+  // segments only; the per-status counts cover every listed segment, so a
+  // street that only has off-by-default segments still has a row to show
+  // when those statuses are switched on.
+  function groupStreets() {
+    var byName = {};
+    features.forEach(function (f, i) {
+      var p = f.properties;
+      var name = p.street || NONAME;
+      var s = byName[name];
+      if (!s) {
+        s = byName[name] = { name: name, km: 0, counts: {}, idx: [] };
+        streets.push(s);
+      }
+      s.idx.push(i);
+      s.counts[p.status] = (s.counts[p.status] || 0) + 1;
+      if (GAP[p.status]) { s.km += (p.untraced || 0) / 1000; }
     });
-    var n = best.length, ox = best[0][0], oy = best[0][1];
-    var area = 0, cx = 0, cy = 0;
-    for (var i = 0; i < n; i++) {
-      var x0 = best[i][0] - ox, y0 = best[i][1] - oy;
-      var x1 = best[(i + 1) % n][0] - ox, y1 = best[(i + 1) % n][1] - oy;
-      var cross = x0 * y1 - x1 * y0;
-      area += cross;
-      cx += (x0 + x1) * cross;
-      cy += (y0 + y1) * cross;
-    }
-    if (area === 0) {
-      var sx = 0, sy = 0;
-      best.forEach(function (p) { sx += p[0]; sy += p[1]; });
-      return [sy / n, sx / n];
-    }
-    area *= 0.5;
-    return [cy / (6 * area) + oy, cx / (6 * area) + ox];
+    streets.sort(function (a, b) {
+      // The unnamed bucket is a remainder, not a street: always last.
+      if ((a.name === NONAME) !== (b.name === NONAME)) {
+        return a.name === NONAME ? 1 : -1;
+      }
+      return (b.km - a.km) || (b.idx.length - a.idx.length) ||
+        (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    });
+    streets.forEach(function (s, si) {
+      s.idx.sort(function (a, b) {
+        var pa = features[a].properties, pb = features[b].properties;
+        return ((pb.untraced || 0) - (pa.untraced || 0)) ||
+          ((pb.length || 0) - (pa.length || 0));
+      });
+      s.idx.forEach(function (i) { streetOf[i] = si; });
+    });
   }
 
-  function ringArea(r) {
-    var a = 0, n = r.length, ox = r[0][0], oy = r[0][1];
-    for (var i = 0; i < n; i++) {
-      var x0 = r[i][0] - ox, y0 = r[i][1] - oy;
-      var x1 = r[(i + 1) % n][0] - ox, y1 = r[(i + 1) % n][1] - oy;
-      a += x0 * y1 - x1 * y0;
+  // Point halfway along the longest part, as [lat, lng]: where O / I and the
+  // link pair send the mapper. A vertex average lands off a curved sidewalk.
+  function midpoint(geom) {
+    var parts = geom.type === "MultiLineString"
+      ? geom.coordinates : [geom.coordinates];
+    var best = null, bestLen = -1;
+    parts.forEach(function (pts) {
+      var len = partLength(pts);
+      if (len > bestLen) { bestLen = len; best = pts; }
+    });
+    if (!best || !best.length) { return null; }
+    var half = bestLen / 2, walked = 0;
+    for (var k = 1; k < best.length; k++) {
+      var d = segLength(best[k - 1], best[k]);
+      if (walked + d >= half && d > 0) {
+        var t = (half - walked) / d;
+        return [best[k - 1][1] + t * (best[k][1] - best[k - 1][1]),
+                best[k - 1][0] + t * (best[k][0] - best[k - 1][0])];
+      }
+      walked += d;
     }
-    return a / 2;
+    return [best[0][1], best[0][0]];
   }
 
-  // Where to send the user for a gap: the openstreetmap.org view and the iD
-  // editor, centred on the building. A gap has no OSM object to point at.
+  function partLength(pts) {
+    var len = 0;
+    for (var k = 1; k < pts.length; k++) { len += segLength(pts[k - 1], pts[k]); }
+    return len;
+  }
+
+  // Equirectangular length in degrees of latitude: only ever compared with
+  // itself, so the unit does not matter, but longitude must be shrunk by
+  // cos(lat) or an east-west part reads 1.4x longer than it is at Guelph.
+  function segLength(a, b) {
+    var dx = (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180);
+    var dy = b[1] - a[1];
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  // Where to send the user for a segment: the openstreetmap.org view and the
+  // iD editor, centred on its midpoint.
   function osmTargets(f) {
-    var c = f._center;
+    var c = f._mid;
     if (!c) { return null; }
     var ll = c[0].toFixed(6) + "/" + c[1].toFixed(6);
     return {
@@ -122,74 +186,158 @@
     };
   }
 
-  // "OSM · iD" link pair shared by the table and the popups.
+  // "OSM · iD" link pair shared by the table and the popups, plus a link to
+  // the OSM way the status is about, when there is one: the footway to
+  // retag, the road saying sidewalk=no, the road carrying sidewalk=*.
   function osmPairHtml(f) {
     var t = osmTargets(f);
-    if (!t) { return ""; }
-    return '<a href="' + t.osm + '" target="_blank" rel="noopener" ' +
-      'title="View on openstreetmap.org (hotkey: O)">OSM</a> &middot; ' +
-      '<a href="' + t.id + '" target="_blank" rel="noopener" ' +
-      'title="Open in the iD editor (hotkey: I)">iD</a>';
+    var h = "";
+    if (t) {
+      h = '<a href="' + t.osm + '" target="_blank" rel="noopener" ' +
+        'title="View on openstreetmap.org (hotkey: O)">OSM</a> &middot; ' +
+        '<a href="' + t.id + '" target="_blank" rel="noopener" ' +
+        'title="Open in the iD editor (hotkey: I)">iD</a>';
+    }
+    var way = f.properties.way;
+    if (way != null) {
+      h += (h ? " &middot; " : "") +
+        '<a href="https://www.openstreetmap.org/way/' + encodeURIComponent(way) +
+        '" target="_blank" rel="noopener" title="' + esc(wayTitle(f)) +
+        '">OSM way</a>';
+    }
+    return h;
   }
 
-  function label(p) {
-    if (p.name) { return p.name; }
-    return p.bldid != null ? "Building " + p.bldid : "(no id)";
+  function wayTitle(f) {
+    switch (f.properties.status) {
+      case "untagged": return "The plain footway to tag footway=sidewalk";
+      case "road_says_no": return "The road tagged sidewalk=no";
+      case "on_road_tag": return "The road carrying sidewalk=*";
+      case "nosurface": return "The sidewalk way with no surface=*";
+      default: return "The OSM way this status is about";
+    }
+  }
+
+  function segLabel(p) {
+    return p.id != null ? "#" + p.id : "(no id)";
   }
 
   function popupHtml(f) {
     var p = f.properties;
-    var h = "<strong>" + esc(label(p)) + "</strong><br>" +
-      (p.area != null ? p.area.toLocaleString() + " m&sup2; &middot; " : "") +
-      esc(p.source || "no source") + " &middot; " + p.status;
+    var bits = [];
+    if (p.length != null) { bits.push(p.length.toLocaleString() + " m"); }
+    if (GAP[p.status] && p.untraced) {
+      bits.push(p.untraced.toLocaleString() + " m untraced");
+    }
+    var more = [];
+    if (p.surface) { more.push(p.surface); }
+    if (p.width != null) { more.push(p.width + " m wide"); }
+    if (p.installed != null) { more.push("installed " + p.installed); }
+    var h = "<strong>" + esc(p.street || NONAME) + "</strong><br>" +
+      "Sidewalk " + esc(segLabel(p)) + " &middot; " +
+      '<span class="status-' + p.status + '">' + LABELS[p.status] + "</span>" +
+      (bits.length ? "<br>" + bits.join(" &middot; ") : "") +
+      (more.length ? "<br>" + esc(more.join(" · ")) : "");
     var links = osmPairHtml(f);
     if (links) { h += "<br>" + links; }
     return h;
   }
 
+  function fmtKm(km) {
+    return km >= 0.05 ? km.toFixed(1) + " km" : "&mdash;";
+  }
+
+  function chipsHtml(counts) {
+    return STATUSES.filter(function (s) { return counts[s]; }).map(function (s) {
+      return '<span class="chip" data-status="' + s + '" title="' +
+        counts[s] + " " + LABELS[s] + '"><i style="background:' + COLORS[s] +
+        '"></i>' + counts[s] + "</span>";
+    }).join("");
+  }
+
   function buildTable() {
     var tbody = document.querySelector("#gap-table tbody");
-    var rows = features.slice().sort(function (a, b) {
-      return (b.properties.area || 0) - (a.properties.area || 0);
+    var html = [];
+    streets.forEach(function (s, si) {
+      html.push('<tr class="street" data-s="' + si + '">' +
+        '<td class="col-name"><span class="caret"></span>' + esc(s.name) +
+        ' <span class="seg-n"></span></td>' +
+        '<td class="num">' + fmtKm(s.km) + "</td>" +
+        '<td class="chips">' + chipsHtml(s.counts) + "</td><td></td></tr>");
+      s.idx.forEach(function (i) {
+        var p = features[i].properties;
+        var links = osmPairHtml(features[i]);
+        html.push('<tr class="seg" data-i="' + i + '" data-status="' +
+          p.status + '">' +
+          '<td class="col-name">' + esc(segLabel(p)) +
+          (p.length != null ? ' <span class="len">&middot; ' +
+            p.length.toLocaleString() + " m</span>" : "") + "</td>" +
+          '<td class="num">' + (p.untraced ? p.untraced.toLocaleString() +
+            " m" : "&mdash;") + "</td>" +
+          '<td class="status-' + p.status + '">' + LABELS[p.status] + "</td>" +
+          "<td>" + (links ? '<span class="osm-links">' + links + "</span>"
+                          : '<span class="osm-blank">&mdash;</span>') +
+          "</td></tr>");
+      });
     });
-    tbody.innerHTML = rows.map(function (f) {
-      var p = f.properties;
-      var links = osmPairHtml(f);
-      var key = [label(p), p.bldid, p.source].join(" ").toLowerCase();
-      return '<tr data-i="' + p._i + '" data-status="' + p.status +
-        '" data-key="' + esc(key) + '">' +
-        "<td>" + esc(label(p)) + "</td>" +
-        '<td class="num">' +
-        (p.area != null ? p.area.toLocaleString() + " m&sup2;" : "") + "</td>" +
-        "<td>" + esc(p.source || "") + "</td>" +
-        '<td class="status-' + p.status + '">' + p.status + "</td>" +
-        "<td>" + (links ? '<span class="osm-links">' + links + "</span>"
-                        : '<span class="osm-blank">&mdash;</span>') +
-        "</td></tr>";
-    }).join("");
+    tbody.innerHTML = html.join("");
 
     tbody.addEventListener("click", function (ev) {
       if (ev.target.closest("a")) { return; }  // let OSM links work
       var tr = ev.target.closest("tr");
-      if (tr) { select(parseInt(tr.dataset.i, 10), true); }
+      if (!tr) { return; }
+      if (tr.classList.contains("street")) {
+        toggleStreet(parseInt(tr.dataset.s, 10));
+      } else {
+        select(parseInt(tr.dataset.i, 10), true);
+      }
     });
   }
 
-  // Select a gap: outline it, fit the map, open its popup, mark its row.
-  function select(i, fromTable) {
+  // Expand a street (and fit the map to its visible segments), or collapse it.
+  function toggleStreet(si) {
+    var s = streets[si];
+    expanded[si] = !expanded[si];
+    if (selectedStreetRow) { selectedStreetRow.classList.remove("selected"); }
+    selectedStreetRow = null;
+    if (expanded[si]) {
+      // Collapsing is putting a street away, not choosing it: only an
+      // expanded street is marked as the current one.
+      selectedStreetRow = document.querySelector('#gap-table tr.street[data-s="' + si + '"]');
+      if (selectedStreetRow) { selectedStreetRow.classList.add("selected"); }
+      var shown = s.idx.filter(function (i) { return hits[i]; });
+      var group = L.featureGroup((shown.length ? shown : s.idx).map(function (i) {
+        return lines[i];
+      }));
+      map.fitBounds(group.getBounds(), { maxZoom: 18, padding: [40, 40] });
+    }
+    apply();
+  }
+
+  // Select a segment: thicken it, fit the map, open its popup, mark its row.
+  function select(i, fromTable, at) {
     var f = features[i];
     if (!f) { return; }
+    if (selectedIndex != null && lines[selectedIndex]) {
+      lines[selectedIndex].setStyle({ weight: WEIGHT });
+    }
     selectedIndex = i;
+    var line = lines[i];
+    line.setStyle({ weight: SELECTED_WEIGHT });
+    line.bringToFront();
+    if (fromTable) {
+      map.fitBounds(line.getBounds(), { maxZoom: 19, padding: [60, 60] });
+    }
+    if (map.hasLayer(line)) {
+      line.openPopup(at || (f._mid ? L.latLng(f._mid[0], f._mid[1]) : undefined));
+    }
 
-    if (highlight) { map.removeLayer(highlight); }
-    highlight = L.geoJSON(f, {
-      style: { color: "#0a7", weight: 3, fill: false },
-    }).addTo(map);
-    map.fitBounds(highlight.getBounds(), { maxZoom: 19, padding: [60, 60] });
-    if (markers[i] && map.hasLayer(markers[i])) { markers[i].openPopup(); }
-
+    // A segment picked on the map may belong to a collapsed street: open it
+    // so the row exists to highlight.
+    var si = streetOf[i];
+    if (!expanded[si]) { expanded[si] = true; apply(); }
     if (selectedRow) { selectedRow.classList.remove("selected"); }
-    var tr = document.querySelector('#gap-table tr[data-i="' + i + '"]');
+    var tr = document.querySelector('#gap-table tr.seg[data-i="' + i + '"]');
     if (tr) {
       tr.classList.add("selected");
       selectedRow = tr;
@@ -198,38 +346,64 @@
   }
 
   function wireControls() {
-    var boxes = {
-      missing: document.getElementById("show-missing"),
-      small: document.getElementById("show-small"),
-      plan: document.getElementById("show-plan"),
-    };
+    var boxes = {};
+    STATUSES.forEach(function (s) {
+      boxes[s] = document.getElementById("show-" + s);
+    });
     var filter = document.getElementById("filter");
+    var streetRows = document.querySelectorAll("#gap-table tr.street");
+    var segRows = {};
+    Array.prototype.forEach.call(
+      document.querySelectorAll("#gap-table tr.seg"),
+      function (tr) { segRows[tr.dataset.i] = tr; });
 
     function statusOn(status) {
       var b = boxes[status];
       return b ? b.checked : true;
     }
 
-    function apply() {
+    // A segment passes when its status is on and the filter text is empty,
+    // in its street's name, or in its City id / OSM way id. A street row
+    // shows while any of its segments pass; a segment row shows when its
+    // street is expanded, or when the filter found it by id (so typing an id
+    // lands on the row without hunting for its street).
+    apply = function () {
       var q = filter.value.trim().toLowerCase();
-      var rows = document.querySelectorAll("#gap-table tbody tr");
-      Array.prototype.forEach.call(rows, function (tr) {
-        var hit = statusOn(tr.dataset.status) &&
-          (!q || tr.dataset.key.indexOf(q) > -1);
-        tr.style.display = hit ? "" : "none";
-        var m = markers[parseInt(tr.dataset.i, 10)];
-        if (hit && !map.hasLayer(m)) { map.addLayer(m); }
-        else if (!hit && map.hasLayer(m)) { map.removeLayer(m); }
+      streets.forEach(function (s, si) {
+        var nameHit = !q || s.name.toLowerCase().indexOf(q) > -1;
+        var any = 0;
+        s.idx.forEach(function (i) {
+          var p = features[i].properties;
+          var idHit = !!q && (String(p.id == null ? "" : p.id).indexOf(q) > -1 ||
+            String(p.way == null ? "" : p.way).indexOf(q) > -1);
+          var hit = statusOn(p.status) && (nameHit || idHit);
+          hits[i] = hit;
+          if (hit) { any++; }
+          segRows[i].style.display =
+            hit && (expanded[si] || (idHit && !nameHit)) ? "" : "none";
+          var m = lines[i];
+          if (hit && !map.hasLayer(m)) { map.addLayer(m); }
+          else if (!hit && map.hasLayer(m)) { map.removeLayer(m); }
+        });
+        var tr = streetRows[si];
+        tr.style.display = any ? "" : "none";
+        tr.classList.toggle("open", !!expanded[si]);
+        // How many of its segments the current filter shows, beside the name.
+        tr.querySelector(".seg-n").textContent =
+          any ? "(" + any + ")" : "";
       });
-    }
+      if (selectedIndex != null && map.hasLayer(lines[selectedIndex])) {
+        lines[selectedIndex].bringToFront();
+      }
+    };
 
-    Object.keys(boxes).forEach(function (k) {
+    STATUSES.forEach(function (k) {
       if (boxes[k]) { boxes[k].addEventListener("change", apply); }
     });
     filter.addEventListener("input", apply);
     apply();
 
-    // O / I open the selected gap on openstreetmap.org / in the iD editor.
+    // O / I open the selected segment on openstreetmap.org / in the iD editor.
     document.addEventListener("keydown", function (ev) {
       if (ev.ctrlKey || ev.metaKey || ev.altKey) { return; }
       if (/^(input|textarea|select)$/i.test(ev.target.tagName)) { return; }

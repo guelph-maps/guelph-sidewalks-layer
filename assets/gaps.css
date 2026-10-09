@@ -33,9 +33,14 @@ body.app { margin: 0; display: flex; flex-direction: column; }
 }
 .count strong { font-size: 1.15rem; margin-right: .35rem; }
 .count span { color: var(--muted); font-size: .82rem; }
+/* Status colours: the same palette as the map's lines (COLORS in gaps.js). */
+.count.headline { border-left: 4px solid #c2255c; }
+.count.headline strong { font-size: 1.35rem; }
 .count.missing { border-left: 4px solid #c2255c; }
-.count.small { border-left: 4px solid #868e96; }
-.count.plan { border-left: 4px solid #e8590c; }
+.count.partial { border-left: 4px solid #f08c00; }
+.count.far { border-left: 4px solid #7048e8; }
+.count.road_says_no { border-left: 4px solid #e03131; }
+.count.untagged { border-left: 4px solid #1c7ed6; }
 .count.meta-count {
   display: flex;
   align-items: center;
@@ -44,6 +49,15 @@ body.app { margin: 0; display: flex; flex-direction: column; }
   background: none;
   border: 0;
   margin-left: auto;
+}
+
+/* The caveat under the counts: what the headline figure does and does not
+   mean. Kept short and in the header, since the figure is quoted alone. */
+.note {
+  margin: .5rem 0 0;
+  max-width: 75rem;
+  font-size: .85rem;
+  line-height: 1.45;
 }
 
 /* The City licence notice. Publishing these tiles redistributes City data, and
@@ -87,7 +101,7 @@ body.app { margin: 0; display: flex; flex-direction: column; }
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: .9rem;
+  gap: .5rem .9rem;
 }
 .controls label { display: inline-flex; align-items: center; gap: .35rem; }
 .controls #filter {
@@ -99,10 +113,16 @@ body.app { margin: 0; display: flex; flex-direction: column; }
 }
 .hint { margin: .6rem 0 0; color: var(--muted); font-size: .82rem; line-height: 1.45; }
 
-.swatch { display: inline-block; width: .9rem; height: .9rem; border-radius: 50%; }
+/* Line swatches: the map draws lines, so the key is a short bar, not a dot. */
+.swatch { display: inline-block; width: 1rem; height: .3rem; border-radius: 2px; }
 .swatch.missing { background: #c2255c; }
-.swatch.small { background: #868e96; }
-.swatch.plan { background: #e8590c; }
+.swatch.partial { background: #f08c00; }
+.swatch.far { background: #7048e8; }
+.swatch.road_says_no { background: #e03131; }
+.swatch.untagged { background: #1c7ed6; }
+.swatch.on_road_tag { background: #868e96; }
+.swatch.proposed { background: #e8590c; }
+.swatch.nosurface { background: #ced4da; }
 
 /* --- data table --- */
 #gap-table { font-size: .9rem; }
@@ -118,9 +138,42 @@ body.app { margin: 0; display: flex; flex-direction: column; }
 #gap-table tbody tr { cursor: pointer; }
 #gap-table tbody tr:hover { background: #f0f8f3; }
 #gap-table tbody tr.selected { background: #e6f4ec; }
-#gap-table .status-missing { color: #a61e4d; font-weight: 600; }
-#gap-table .status-small { color: #666; font-weight: 600; }
-#gap-table .status-plan { color: #c2410c; font-weight: 600; }
+/* Status text, a shade darker than the line colour so it reads on white. */
+.status-missing { color: #a61e4d; font-weight: 600; }
+.status-partial { color: #b35c00; font-weight: 600; }
+.status-far { color: #5f3dc4; font-weight: 600; }
+.status-road_says_no { color: #c92a2a; font-weight: 600; }
+.status-untagged { color: #1864ab; font-weight: 600; }
+.status-on_road_tag { color: #666; font-weight: 600; }
+.status-proposed { color: #c2410c; font-weight: 600; }
+.status-nosurface { color: #868e96; font-weight: 600; }
+
+/* Street rows lead; segment rows sit indented beneath an expanded street. */
+#gap-table tr.street td { font-weight: 600; border-top: 1px solid var(--border); }
+#gap-table tr.street .seg-n { font-weight: 400; color: var(--muted); font-size: .85em; }
+#gap-table tr.street .caret {
+  display: inline-block;
+  width: 1em;
+  color: var(--muted);
+  transition: transform .1s;
+}
+#gap-table tr.street .caret::before { content: "\25B8"; }
+#gap-table tr.street.open .caret { transform: rotate(90deg); }
+#gap-table tr.seg td { padding-top: .3rem; padding-bottom: .3rem; font-size: .85rem; }
+#gap-table tr.seg td.col-name { padding-left: 1.9rem; }
+#gap-table tr.seg .len { color: var(--muted); }
+#gap-table td.chips { white-space: normal; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
+  margin: 0 .45rem 0 0;
+  font-weight: 400;
+  font-size: .82rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chip i { display: inline-block; width: .7rem; height: .25rem; border-radius: 2px; }
 #gap-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 #gap-table .osm-blank { color: var(--muted); }
 #gap-table .osm-links { white-space: nowrap; }

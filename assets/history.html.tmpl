@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Guelph Buildings &mdash; OSM Coverage Gaps Over Time</title>
+<title>Guelph Sidewalks &mdash; OSM Coverage Gaps Over Time</title>
 <link rel="stylesheet" href="../index.css">
 <style>
   main { max-width: 900px; }
@@ -21,6 +21,7 @@
   .chart .end-label { fill: var(--ink); font-weight: 600; }
   .chart .crosshair { stroke: var(--muted); stroke-width: 1; pointer-events: none; }
   .chart .hit { fill: transparent; cursor: crosshair; }
+  h2 { margin-top: 1.6rem; }
   .tip {
     position: absolute; top: 0; left: 0; pointer-events: none; display: none;
     background: #fff; border: 1px solid var(--border); border-radius: 4px;
@@ -40,29 +41,41 @@
 <body>
 <main>
 
-<h1>OSM coverage gaps over time</h1>
+<h1>Sidewalk gaps over time</h1>
 <p class="lead">
-  How many City of Guelph buildings still have no OpenStreetMap building on
-  them &mdash; <strong>missing</strong>, <strong>small</strong> (sheds and
-  garages) and drawn from a <strong>site plan</strong> &mdash; one point per
-  weekly comparison, so a mapper can see the worklist shrink.
+  How much City of Guelph sidewalk still has no OpenStreetMap line within
+  {{MATCH_M}}&nbsp;m &mdash; in <strong>kilometres untraced</strong>, and in
+  segments that are <strong>missing</strong>, <strong>partial</strong>,
+  <strong>far</strong> from an OSM line, on a road that <strong>says
+  no</strong> sidewalk, or traced as an <strong>untagged</strong> footway
+  &mdash; one point per weekly comparison, so a mapper can see the worklist
+  shrink.
 </p>
 <p class="meta">{{RUN_COUNT}} comparisons since {{FIRST_DATE}} &middot; last {{BUILD_DATE}} &middot;
   <a href="./">current gaps</a> &middot; <a href="history.jsonl">data (JSONL)</a></p>
 
-<div class="legend" id="legend"></div>
-<div class="chart" id="chart"><div class="tip" id="tip"></div></div>
+<h2>Untraced kilometres</h2>
+<div class="legend" id="legend-km"></div>
+<div class="chart" id="chart-km"><div class="tip"></div></div>
+
+<h2>Segments by status</h2>
+<div class="legend" id="legend-counts"></div>
+<div class="chart" id="chart-counts"><div class="tip"></div></div>
 
 <p class="meta" style="margin-top:.75rem">
-  Counts follow the City's Buildings layer, so they move when the City adds
-  or removes buildings, not only when someone maps one.
+  Figures follow the City's Sidewalks layer, so they move when the City adds
+  or removes sidewalk, not only when someone maps one. A segment that is
+  traced moves out of its status; one that is half traced can move from
+  missing to partial first.
 </p>
 
 <h2>Every comparison</h2>
 <table class="runs">
   <thead>
-    <tr><th>Date</th><th>Missing</th><th>Small</th><th>Site plan</th>
-        <th>City buildings</th><th>OSM buildings</th><th>Source</th></tr>
+    <tr><th>Date</th><th>Untraced km</th><th>Missing</th><th>Partial</th>
+        <th>Far</th><th>Road says no</th><th>Untagged</th>
+        <th>Streets &ge;&nbsp;{{STREET_MIN_KM}}&nbsp;km</th><th>City km</th>
+        <th>Source</th></tr>
   </thead>
   <tbody>
 {{HISTORY_ROWS}}
