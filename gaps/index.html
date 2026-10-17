@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guelph Sidewalks &mdash; OSM Coverage Gaps</title>
+<link rel="stylesheet" href="../index.css">
+<link rel="stylesheet" href="gaps.css">
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script defer src="gaps.js"></script>
+</head>
+<body class="app">
+
+<header class="bar">
+  <div class="bar-head">
+    <h1>Guelph Sidewalks &mdash; OSM coverage gaps</h1>
+    <a class="back" href="../">&larr; reference layer</a>
+    <a class="back" href="history.html">gaps over time &rarr;</a>
+  </div>
+  <div class="counts">
+    <div class="count headline"><strong>70.4 km</strong><span>of City sidewalk with no OSM line within 15&nbsp;m</span></div>
+    <div class="count"><strong>100</strong><span>streets with &ge;&nbsp;0.2&nbsp;km of it</span></div>
+    <div class="count missing"><strong>318</strong><span>missing</span></div>
+    <div class="count partial"><strong>105</strong><span>partial</span></div>
+    <div class="count far"><strong>23</strong><span>far</span></div>
+    <div class="count road_says_no"><strong>21</strong><span>road says no</span></div>
+    <div class="count untagged"><strong>33</strong><span>untagged footway</span></div>
+    <div class="count"><strong>715.8 km</strong><span>City sidewalk built</span></div>
+    <div class="count"><strong>4,513</strong><span>OSM sidewalk ways</span></div>
+    <div class="count meta-count">City data 2026-10-17 &middot; OSM data 2026-10-17 20:30Z &middot; compared 2026-10-17</div>
+  </div>
+  
+  <p class="note">
+    The City layer is accurate to 1&ndash;5&nbsp;m, and 8.8&nbsp;km of the
+    untraced length sits 15&ndash;25&nbsp;m from an OSM line, so
+    the honest figure is ~60&ndash;75&nbsp;km;
+    50.7&nbsp;km has nothing within 50&nbsp;m. The original
+    audit's &ldquo;OSM has 92%&rdquo; divided total lengths &mdash; it never
+    asked whether they are the same sidewalks.
+  </p>
+  <p class="licence">
+    <a href="https://gismaps.guelph.ca/Images/OpenDataLicenceVersion2.pdf">Contains information licensed under the Open Government Licence – City of Guelph.</a>
+    Source: <a href="https://gismaps.guelph.ca/hosting/rest/services/OpenData/OpenData2/FeatureServer/0">Sidewalks</a>.
+  </p>
+</header>
+
+<div class="layout">
+  <div id="gap-map"
+       data-geojson="gaps.geojson"
+       data-raster="../tiles/raster/{z}/{x}/{y}.png"
+       data-raster-maxzoom="18"></div>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <div class="controls">
+        <label title="Under 20% traced, no OSM line nearby"><span class="swatch missing"></span>
+          <input type="checkbox" id="show-missing" checked> Missing</label>
+        <label title="20% to 70% traced"><span class="swatch partial"></span>
+          <input type="checkbox" id="show-partial" checked> Partial</label>
+        <label title="An OSM line 15-25 m away: check the alignment before adding one"><span class="swatch far"></span>
+          <input type="checkbox" id="show-far" checked> Far</label>
+        <label title="The OSM road says sidewalk=no where the City has one"><span class="swatch road_says_no"></span>
+          <input type="checkbox" id="show-road_says_no" checked> Road says no</label>
+        <label title="Covered by a plain highway=footway: tag it footway=sidewalk"><span class="swatch untagged"></span>
+          <input type="checkbox" id="show-untagged" checked> Untagged</label>
+        <label title="Mapped as sidewalk=* on the road: a valid way to map it (108 segments)"><span class="swatch on_road_tag"></span>
+          <input type="checkbox" id="show-on_road_tag"> On road tag</label>
+        <label title="City status PROPOSED: may not be poured yet (7 segments)"><span class="swatch proposed"></span>
+          <input type="checkbox" id="show-proposed"> Proposed</label>
+        <label title="Matched sidewalk way with no surface=* (2,697 segments)"><span class="swatch nosurface"></span>
+          <input type="checkbox" id="show-nosurface"> No surface</label>
+        <input type="search" id="filter" placeholder="Filter by street or id...">
+      </div>
+      <p class="hint">
+        Each City sidewalk is sampled every 5&nbsp;m; a sample
+        counts as traced when OSM has a pedestrian line (or a road tagged
+        <code>sidewalk=*</code>) within 15&nbsp;m, and a segment
+        &ge;&nbsp;70% traced is matched. Streets are named after
+        the nearest OSM road, so their count may differ slightly from the
+        audit's 97, which used City centrelines. Click a street to zoom to it
+        and list its segments; click a segment (or a line on the map) to select
+        it, then press <kbd>O</kbd> to open the spot on openstreetmap.org or
+        <kbd>I</kbd> in the iD editor (each segment has the same
+        <strong>OSM&nbsp;&middot;&nbsp;iD</strong> link pair). Cyan lines from
+        z15 are the City's own layer; check current imagery before adding
+        anything.
+      </p>
+    </div>
+    <div class="table-scroll">
+      <table id="gap-table">
+        <thead>
+          <tr><th class="col-name">Street / segment</th><th>Untraced</th>
+              <th>Segments</th><th>Links</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>

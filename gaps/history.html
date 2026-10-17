@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guelph Sidewalks &mdash; OSM Coverage Gaps Over Time</title>
+<link rel="stylesheet" href="../index.css">
+<style>
+  main { max-width: 900px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 1.1rem; font-size: .9rem; margin: 1rem 0 .25rem; }
+  .legend span { display: inline-flex; align-items: center; gap: .4rem; }
+  .legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; border-radius: 2px; }
+  .legend .attic i { width: 14px; height: 12px; border: 0; background: var(--code-bg); }
+  .chart { position: relative; overflow-x: auto; }
+  .chart svg { display: block; width: 100%; min-width: 640px; height: auto; font-size: 12px; }
+  .chart .attic-band { fill: var(--code-bg); }
+  .chart .grid { stroke: var(--border); stroke-width: 1; }
+  .chart .axis { fill: var(--muted); }
+  .chart .series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .chart .pt { stroke: #fff; stroke-width: 2; }
+  .chart .end-label { fill: var(--ink); font-weight: 600; }
+  .chart .crosshair { stroke: var(--muted); stroke-width: 1; pointer-events: none; }
+  .chart .hit { fill: transparent; cursor: crosshair; }
+  h2 { margin-top: 1.6rem; }
+  .tip {
+    position: absolute; top: 0; left: 0; pointer-events: none; display: none;
+    background: #fff; border: 1px solid var(--border); border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12); padding: .45rem .65rem;
+    font-size: .85rem; line-height: 1.45; white-space: nowrap;
+  }
+  .tip .d { color: var(--muted); }
+  .tip i { display: inline-block; width: 12px; border-top: 2px solid; margin-right: .4rem; vertical-align: middle; }
+  .tip strong { display: inline-block; min-width: 3em; }
+  .empty { color: var(--muted); padding: 2rem 0; }
+  table.runs { font-size: .9rem; }
+  table.runs th { width: auto; }
+  table.runs td:not(:first-child):not(:last-child) { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+<script defer src="history.js"></script>
+</head>
+<body>
+<main>
+
+<h1>Sidewalk gaps over time</h1>
+<p class="lead">
+  How much City of Guelph sidewalk still has no OpenStreetMap line within
+  15&nbsp;m &mdash; in <strong>kilometres untraced</strong>, and in
+  segments that are <strong>missing</strong>, <strong>partial</strong>,
+  <strong>far</strong> from an OSM line, on a road that <strong>says
+  no</strong> sidewalk, or traced as an <strong>untagged</strong> footway
+  &mdash; one point per weekly comparison, so a mapper can see the worklist
+  shrink.
+</p>
+<p class="meta">3 comparisons since 2026-10-09 &middot; last 2026-10-17 &middot;
+  <a href="./">current gaps</a> &middot; <a href="history.jsonl">data (JSONL)</a></p>
+
+<h2>Untraced kilometres</h2>
+<div class="legend" id="legend-km"></div>
+<div class="chart" id="chart-km"><div class="tip"></div></div>
+
+<h2>Segments by status</h2>
+<div class="legend" id="legend-counts"></div>
+<div class="chart" id="chart-counts"><div class="tip"></div></div>
+
+<p class="meta" style="margin-top:.75rem">
+  Figures follow the City's Sidewalks layer, so they move when the City adds
+  or removes sidewalk, not only when someone maps one. A segment that is
+  traced moves out of its status; one that is half traced can move from
+  missing to partial first.
+</p>
+
+<h2>Every comparison</h2>
+<table class="runs">
+  <thead>
+    <tr><th>Date</th><th>Untraced km</th><th>Missing</th><th>Partial</th>
+        <th>Far</th><th>Road says no</th><th>Untagged</th>
+        <th>Streets &ge;&nbsp;0.2&nbsp;km</th><th>City km</th>
+        <th>Source</th></tr>
+  </thead>
+  <tbody>
+<tr><td>2026-10-17</td><td>70.4</td><td>318</td><td>105</td><td>23</td><td>21</td><td>33</td><td>100</td><td>715.9</td><td>live</td></tr>
+<tr><td>2026-10-12</td><td>70.4</td><td>318</td><td>105</td><td>23</td><td>21</td><td>33</td><td>100</td><td>715.9</td><td>live</td></tr>
+<tr><td>2026-10-09</td><td>70.5</td><td>318</td><td>106</td><td>23</td><td>21</td><td>33</td><td>100</td><td>715.9</td><td>live</td></tr>
+  </tbody>
+</table>
+
+<p class="meta" style="margin-top:2rem">
+  Built by <a href="https://github.com/guelph-maps/guelph-sidewalks-layer">guelph-maps/guelph-sidewalks-layer</a>.
+  OSM data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.
+  <a href="https://gismaps.guelph.ca/Images/OpenDataLicenceVersion2.pdf">Contains information licensed under the Open Government Licence – City of Guelph.</a>
+</p>
+
+<script type="application/json" id="history-data">[{"date": "2026-10-09", "osm_date": "2026-10-09 22:06Z", "source": "live", "untraced_km": 70.5, "missing": 318, "partial": 106, "far": 23, "road_says_no": 21, "untagged": 33, "streets": 100, "city_km": 715.9}, {"date": "2026-10-12", "osm_date": "2026-10-12 04:17Z", "source": "live", "untraced_km": 70.4, "missing": 318, "partial": 105, "far": 23, "road_says_no": 21, "untagged": 33, "streets": 100, "city_km": 715.9}, {"date": "2026-10-17", "osm_date": "2026-10-17 20:30Z", "source": "live", "untraced_km": 70.4, "missing": 318, "partial": 105, "far": 23, "road_says_no": 21, "untagged": 33, "streets": 100, "city_km": 715.9}]</script>
+</main>
+</body>
+</html>

@@ -1,0 +1,196 @@
+/* Gap-review page: full-viewport two-panel app shell over ../index.css. */
+
+html, body.app { height: 100%; }
+body.app { margin: 0; display: flex; flex-direction: column; }
+
+/* --- header bar --- */
+.bar {
+  flex: none;
+  padding: .7rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+.bar-head {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.bar h1 { font-size: 1.25rem; margin: 0; border: 0; }
+.bar .back { font-size: .9rem; white-space: nowrap; }
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .6rem;
+}
+.count {
+  padding: .35rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--code-bg);
+  line-height: 1.15;
+}
+.count strong { font-size: 1.15rem; margin-right: .35rem; }
+.count span { color: var(--muted); font-size: .82rem; }
+/* Status colours: the same palette as the map's lines (COLORS in gaps.js). */
+.count.headline { border-left: 4px solid #c2255c; }
+.count.headline strong { font-size: 1.35rem; }
+.count.missing { border-left: 4px solid #c2255c; }
+.count.partial { border-left: 4px solid #f08c00; }
+.count.far { border-left: 4px solid #7048e8; }
+.count.road_says_no { border-left: 4px solid #e03131; }
+.count.untagged { border-left: 4px solid #1c7ed6; }
+.count.meta-count {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: .82rem;
+  background: none;
+  border: 0;
+  margin-left: auto;
+}
+
+/* The caveat under the counts: what the headline figure does and does not
+   mean. Kept short and in the header, since the figure is quoted alone. */
+.note {
+  margin: .5rem 0 0;
+  max-width: 75rem;
+  font-size: .85rem;
+  line-height: 1.45;
+}
+
+/* The City licence notice. Publishing these tiles redistributes City data, and
+   carrying this line is the licence condition attached to that -- so it sits in
+   the gap page header in its own right, not only on the landing page, because
+   the gap page is often the only page a mapper ever opens. */
+.licence {
+  margin: .6rem 0 0;
+  font-size: .82rem;
+  color: var(--muted);
+}
+
+/* Shown only when Overpass could not be reached and the diff ran on cached OSM;
+   the header is otherwise all counts, so a warning needs its own row. */
+.stale {
+  margin: .5rem 0 0;
+  padding: .45rem .7rem;
+  border-left: 4px solid #e8590c;
+  background: rgba(232, 89, 12, .09);
+  color: var(--ink);
+  font-size: .85rem;
+  line-height: 1.4;
+}
+
+/* --- two-panel body --- */
+.layout { flex: 1; display: flex; min-height: 0; }
+#gap-map { flex: 1 1 auto; min-width: 0; height: 100%; }
+
+.panel {
+  flex: 0 0 30rem;
+  max-width: 45vw;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+}
+.panel-head { flex: none; padding: .8rem 1rem; border-bottom: 1px solid var(--border); }
+.table-scroll { flex: 1; overflow: auto; }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .9rem;
+}
+.controls label { display: inline-flex; align-items: center; gap: .35rem; }
+.controls #filter {
+  flex: 1 1 9rem;
+  padding: .35rem .55rem;
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.hint { margin: .6rem 0 0; color: var(--muted); font-size: .82rem; line-height: 1.45; }
+
+/* Line swatches: the map draws lines, so the key is a short bar, not a dot. */
+.swatch { display: inline-block; width: 1rem; height: .3rem; border-radius: 2px; }
+.swatch.missing { background: #c2255c; }
+.swatch.partial { background: #f08c00; }
+.swatch.far { background: #7048e8; }
+.swatch.road_says_no { background: #e03131; }
+.swatch.untagged { background: #1c7ed6; }
+.swatch.on_road_tag { background: #868e96; }
+.swatch.proposed { background: #e8590c; }
+.swatch.nosurface { background: #ced4da; }
+
+/* --- data table --- */
+#gap-table { font-size: .9rem; }
+#gap-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  width: auto;
+  background: var(--code-bg);
+  border-top: 0;
+}
+#gap-table td { padding: .45rem .7rem; }
+#gap-table tbody tr { cursor: pointer; }
+#gap-table tbody tr:hover { background: #f0f8f3; }
+#gap-table tbody tr.selected { background: #e6f4ec; }
+/* Status text, a shade darker than the line colour so it reads on white. */
+.status-missing { color: #a61e4d; font-weight: 600; }
+.status-partial { color: #b35c00; font-weight: 600; }
+.status-far { color: #5f3dc4; font-weight: 600; }
+.status-road_says_no { color: #c92a2a; font-weight: 600; }
+.status-untagged { color: #1864ab; font-weight: 600; }
+.status-on_road_tag { color: #666; font-weight: 600; }
+.status-proposed { color: #c2410c; font-weight: 600; }
+.status-nosurface { color: #868e96; font-weight: 600; }
+
+/* Street rows lead; segment rows sit indented beneath an expanded street. */
+#gap-table tr.street td { font-weight: 600; border-top: 1px solid var(--border); }
+#gap-table tr.street .seg-n { font-weight: 400; color: var(--muted); font-size: .85em; }
+#gap-table tr.street .caret {
+  display: inline-block;
+  width: 1em;
+  color: var(--muted);
+  transition: transform .1s;
+}
+#gap-table tr.street .caret::before { content: "\25B8"; }
+#gap-table tr.street.open .caret { transform: rotate(90deg); }
+#gap-table tr.seg td { padding-top: .3rem; padding-bottom: .3rem; font-size: .85rem; }
+#gap-table tr.seg td.col-name { padding-left: 1.9rem; }
+#gap-table tr.seg .len { color: var(--muted); }
+#gap-table td.chips { white-space: normal; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
+  margin: 0 .45rem 0 0;
+  font-weight: 400;
+  font-size: .82rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chip i { display: inline-block; width: .7rem; height: .25rem; border-radius: 2px; }
+#gap-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#gap-table .osm-blank { color: var(--muted); }
+#gap-table .osm-links { white-space: nowrap; }
+
+.hint kbd {
+  display: inline-block;
+  padding: 0 .35em;
+  font: 600 .9em/1.5 ui-monospace, Menlo, Consolas, monospace;
+  color: var(--ink, #222);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+@media (max-width: 820px) {
+  .layout { flex-direction: column; }
+  #gap-map { height: 48vh; flex: none; }
+  .panel { flex: 1; max-width: none; border-left: 0; border-top: 1px solid var(--border); }
+  .count.meta-count { margin-left: 0; }
+}

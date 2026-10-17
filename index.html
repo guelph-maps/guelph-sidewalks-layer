@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guelph Sidewalks &mdash; Reference Layer for OSM Editors</title>
+<link rel="stylesheet" href="index.css">
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script defer src="index.js"></script>
+</head>
+<body>
+<main>
+
+<h1>Guelph Sidewalks</h1>
+<p class="lead">
+  A reference layer of the sidewalks published by the City of Guelph &mdash;
+  <strong>5,245</strong> lines from the City's Sidewalks layer,
+  <strong>715.8 km</strong> of them built &mdash; ready to add to the
+  <a href="https://www.openstreetmap.org">OpenStreetMap</a> editors
+  <strong>iD</strong> and <strong>JOSM</strong> while you map.
+</p>
+<p class="meta">City data: 2026-10-17 &middot; tiles rebuilt: 2026-10-17</p>
+
+<div class="attribution">
+  <a href="https://gismaps.guelph.ca/Images/OpenDataLicenceVersion2.pdf">Contains information licensed under the Open Government Licence – City of Guelph.</a>
+  Source: <a href="https://gismaps.guelph.ca/hosting/rest/services/OpenData/OpenData2/FeatureServer/0">Sidewalks</a> (OpenData2/FeatureServer/0).
+</div>
+
+<h2>Preview</h2>
+<div id="preview-map" data-raster-url="https://guelph-maps.github.io/guelph-sidewalks-layer/tiles/raster/{z}/{x}/{y}.png"
+     data-minzoom="15" data-maxzoom="18"></div>
+<p class="meta">
+  The raster layer drawn over OpenStreetMap, from zoom 15:
+  <span style="color:#15aabf">cyan</span> lines are built sidewalks,
+  <span style="color:#e8590c">orange</span> ones proposed.
+</p>
+
+<div class="attribution">
+  <strong>Coverage vs OpenStreetMap:</strong>
+  <a href="gaps/">70.4 km of City sidewalk</a> has no OSM line
+  within 15&nbsp;m &mdash; a mapper's worklist, street by street,
+  with an interactive map.
+</div>
+
+<h2>Two layers &mdash; which to use</h2>
+<table>
+  <tr>
+    <th>Vector layer</th>
+    <td>Interactive. Click a line to read its tags (layer
+        <code>sidewalks</code>: <code>id</code>,
+        <code>status</code>, <code>surface</code>, <code>width</code> in m,
+        <code>installed</code> year, <code>length</code> in m). Zooms
+        14&ndash;19. Best in
+        <strong>iD</strong>.</td>
+  </tr>
+  <tr>
+    <th>Raster layer</th>
+    <td>Lines drawn directly on the tiles. A tracing backdrop over aerial
+        imagery. Best in <strong>JOSM</strong>.</td>
+  </tr>
+</table>
+
+<h2>Add to iD</h2>
+<h3>Vector layer (interactive)</h3>
+<ol>
+  <li>Open the iD editor and press <kbd>U</kbd> for the <em>Map Data</em> panel.</li>
+  <li>Under <em>Custom Map Data</em>, open the settings and paste this URL:</li>
+</ol>
+<pre class="url">https://guelph-maps.github.io/guelph-sidewalks-layer/tiles/vector/{z}/{x}/{y}.pbf</pre>
+<p>Zoom in, then click any line to see its tags in the inspector.</p>
+
+<h3>Raster layer</h3>
+<ol>
+  <li>Open the <em>Background</em> panel and choose <em>Custom</em>.</li>
+  <li>Paste this URL template:</li>
+</ol>
+<pre class="url">https://guelph-maps.github.io/guelph-sidewalks-layer/tiles/raster/{z}/{x}/{y}.png</pre>
+<p>
+  As a background it replaces the imagery; the vector layer is the one to
+  use over imagery in iD.
+</p>
+
+<h2>Add to JOSM</h2>
+<h3>Raster layer (recommended for JOSM)</h3>
+<ol>
+  <li>Open <em>Preferences &rarr; Imagery</em> and click <strong>+TMS</strong>.</li>
+  <li>Paste this entry (the <code>tms[15,18]</code>
+      prefix sets the zoom range; JOSM scales it up past z18):</li>
+</ol>
+<pre class="url">tms[15,18]:https://guelph-maps.github.io/guelph-sidewalks-layer/tiles/raster/{zoom}/{x}/{y}.png</pre>
+<p>
+  Give it a name such as <em>Guelph Sidewalks</em>, click OK, then enable it
+  from the <em>Imagery</em> menu above your aerial imagery. Note JOSM's
+  placeholder is <code>{zoom}</code>, not <code>{z}</code>.
+</p>
+
+<h3>Vector layer (optional)</h3>
+<p>
+  JOSM can also add the vector tiles via <em>Preferences &rarr; Imagery</em> &rarr;
+  <strong>+MVT</strong>:
+</p>
+<pre class="url">https://guelph-maps.github.io/guelph-sidewalks-layer/tiles/vector/{zoom}/{x}/{y}.pbf</pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Guelph maps its sidewalks as separate ways
+      (<code>highway=footway</code> + <code>footway=sidewalk</code>), not as
+      <code>sidewalk=*</code> tags on the road, so tracing from this layer
+      follows the local convention. Where a road already carries
+      <code>sidewalk=*</code>, that is a valid way to map it too.</li>
+  <li>Tracing a sidewalk at a time from imagery, with this layer as a guide,
+      is ordinary mapping. Copying the City's lines into OSM by script would
+      be an import, and needs an import proposal and community discussion
+      first.</li>
+  <li>The City states its sidewalks are accurate to 1&ndash;5 m; the imagery
+      decides where a line goes. Proposed sidewalks (orange) may not have
+      been poured yet.</li>
+  <li>Vector tiles are pre-rendered through zoom 19; raster
+      tiles for z15&ndash;18 (the editor
+      overzooms them further).</li>
+  <li>Tiles are refreshed weekly from the City's service.</li>
+  <li>This is a <strong>reference</strong> layer &mdash; check it against
+      current imagery before copying anything into OpenStreetMap. Where a
+      sidewalk in OSM already exists, improve it in place rather than
+      replacing it, so its history and tags survive.</li>
+</ul>
+
+<footer>
+  <a href="https://github.com/guelph-maps/guelph-sidewalks-layer">Project source on GitHub</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://guelph-maps.github.io/guelph-buildings-layer/">Guelph buildings layer</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://guelph-maps.github.io/guelph-parks-layer/">Guelph parks layer</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://guelph-maps.github.io/guelph-address-layer/">Guelph address layer</a>
+</footer>
+
+</main>
+</body>
+</html>
