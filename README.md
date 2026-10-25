@@ -50,7 +50,9 @@ local convention; there is no tagging question to settle first.
   editors.
 - A **gap-review page** ([`/gaps/`](https://guelph-maps.github.io/guelph-sidewalks-layer/gaps/))
   that leads with **streets**, by untraced length, and opens each into its
-  segments on an interactive map. Segment statuses:
+  segments on an interactive map. Each segment links to openstreetmap.org, iD
+  and **JOSM** (needs JOSM running with Preferences &rarr; Remote Control
+  enabled). Segment statuses:
   - **missing** &mdash; under 20% covered: add it;
   - **partial** &mdash; 20–70% covered: finish it;
   - **far** &mdash; an OSM line 15–25 m away: check the alignment before

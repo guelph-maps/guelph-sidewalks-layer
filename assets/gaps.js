@@ -28,6 +28,8 @@
   var GAP = { missing: 1, partial: 1, far: 1, road_says_no: 1 };
   var NONAME = "(no named road nearby)";
   var WEIGHT = 4, SELECTED_WEIGHT = 8;
+  var JOSM = "http://127.0.0.1:8111/load_and_zoom";
+  var PAD_M = 30;  // JOSM box: the segment's bounds padded by this much
 
   var map;
   var features = [];
@@ -79,6 +81,7 @@
     features.forEach(function (f, i) {
       var g = f.geometry;
       f._mid = midpoint(g);
+      f._bounds = bounds(g);
       var latlngs = L.GeoJSON.coordsToLatLngs(g.coordinates,
         g.type === "MultiLineString" ? 1 : 0);
       var line = L.polyline(latlngs, {
@@ -159,6 +162,22 @@
     return [best[0][1], best[0][0]];
   }
 
+  // [south, west, north, east] of a geometry, padded by PAD_M.
+  function bounds(geom) {
+    var parts = geom.type === "MultiLineString"
+      ? geom.coordinates : [geom.coordinates];
+    var s = 90, w = 180, n = -90, e = -180;
+    parts.forEach(function (pts) {
+      pts.forEach(function (p) {
+        s = Math.min(s, p[1]); n = Math.max(n, p[1]);
+        w = Math.min(w, p[0]); e = Math.max(e, p[0]);
+      });
+    });
+    var dLat = PAD_M / 111320;
+    var dLon = PAD_M / (111320 * Math.cos((s + n) / 2 * Math.PI / 180));
+    return [s - dLat, w - dLon, n + dLat, e + dLon];
+  }
+
   function partLength(pts) {
     var len = 0;
     for (var k = 1; k < pts.length; k++) { len += segLength(pts[k - 1], pts[k]); }
@@ -175,18 +194,27 @@
   }
 
   // Where to send the user for a segment: the openstreetmap.org view and the
-  // iD editor, centred on its midpoint.
+  // iD editor, centred on its midpoint, and JOSM remote control (the padded
+  // box downloaded, and the OSM way the status is about selected, if any).
+  // JOSM is opened as a plain link in one reused tab named "josm", not
+  // fetched: browsers gate background requests from a public page to
+  // localhost, but not a link the mapper clicks.
   function osmTargets(f) {
     var c = f._mid;
     if (!c) { return null; }
     var ll = c[0].toFixed(6) + "/" + c[1].toFixed(6);
+    var b = f._bounds, way = f.properties.way;
     return {
       osm: "https://www.openstreetmap.org/#map=19/" + ll,
       id: "https://www.openstreetmap.org/edit#map=20/" + ll,
+      josm: JOSM + "?left=" + b[1].toFixed(6) + "&right=" + b[3].toFixed(6) +
+        "&top=" + b[2].toFixed(6) + "&bottom=" + b[0].toFixed(6) +
+        (way != null ? "&select=way" + encodeURIComponent(way) : "") +
+        "&changeset_source=" + encodeURIComponent("City of Guelph Sidewalks"),
     };
   }
 
-  // "OSM · iD" link pair shared by the table and the popups, plus a link to
+  // "OSM · iD · JOSM" links shared by the table and the popups, plus a link to
   // the OSM way the status is about, when there is one: the footway to
   // retag, the road saying sidewalk=no, the road carrying sidewalk=*.
   function osmPairHtml(f) {
@@ -196,7 +224,9 @@
       h = '<a href="' + t.osm + '" target="_blank" rel="noopener" ' +
         'title="View on openstreetmap.org (hotkey: O)">OSM</a> &middot; ' +
         '<a href="' + t.id + '" target="_blank" rel="noopener" ' +
-        'title="Open in the iD editor (hotkey: I)">iD</a>';
+        'title="Open in the iD editor (hotkey: I)">iD</a> &middot; ' +
+        '<a href="' + esc(t.josm) + '" class="josm" target="josm" ' +
+        'title="Load this area into JOSM via remote control (hotkey: J)">JOSM</a>';
     }
     var way = f.properties.way;
     if (way != null) {
@@ -403,17 +433,22 @@
     filter.addEventListener("input", apply);
     apply();
 
-    // O / I open the selected segment on openstreetmap.org / in the iD editor.
+    // O / I / J open the selected segment on openstreetmap.org / in the iD
+    // editor / in JOSM (the same reused "josm" tab as the links).
     document.addEventListener("keydown", function (ev) {
       if (ev.ctrlKey || ev.metaKey || ev.altKey) { return; }
       if (/^(input|textarea|select)$/i.test(ev.target.tagName)) { return; }
       var key = ev.key.toLowerCase();
-      if (key !== "o" && key !== "i") { return; }
+      if (key !== "o" && key !== "i" && key !== "j") { return; }
       if (selectedIndex == null) { return; }
       var t = osmTargets(features[selectedIndex]);
       if (!t) { return; }
       ev.preventDefault();
-      window.open(key === "o" ? t.osm : t.id, "_blank", "noopener");
+      if (key === "j") {
+        window.open(t.josm, "josm");
+      } else {
+        window.open(key === "o" ? t.osm : t.id, "_blank", "noopener");
+      }
     });
   }
 
