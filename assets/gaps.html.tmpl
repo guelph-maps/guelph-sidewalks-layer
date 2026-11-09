@@ -39,7 +39,8 @@
   {{OSM_NOTE}}
   <p class="note">
     The City layer is accurate to 1&ndash;5&nbsp;m, and {{FAR_KM}}&nbsp;km of the
-    untraced length sits {{MATCH_M}}&ndash;{{FAR_M}}&nbsp;m from an OSM line, so
+    untraced length sits {{MATCH_M}}&ndash;{{FAR_M}}&nbsp;m from an OSM line that no
+    other City sidewalk matches, so
     the honest figure is ~{{HONEST_LOW_KM}}&ndash;{{HONEST_HIGH_KM}}&nbsp;km;
     {{REMOTE_KM}}&nbsp;km has nothing within {{REMOTE_M}}&nbsp;m. The original
     audit's &ldquo;OSM has 92%&rdquo; divided total lengths &mdash; it never
@@ -64,7 +65,7 @@
           <input type="checkbox" id="show-missing" checked> Missing</label>
         <label title="{{PARTIAL_PCT}} to {{MATCHED_PCT}} traced"><span class="swatch partial"></span>
           <input type="checkbox" id="show-partial" checked> Partial</label>
-        <label title="An OSM line {{MATCH_M}}-{{FAR_M}} m away: check the alignment before adding one"><span class="swatch far"></span>
+        <label title="An OSM line {{MATCH_M}}-{{FAR_M}} m away that no other City sidewalk matches: check the alignment before adding one"><span class="swatch far"></span>
           <input type="checkbox" id="show-far" checked> Far</label>
         <label title="The OSM road says sidewalk=no where the City has one"><span class="swatch road_says_no"></span>
           <input type="checkbox" id="show-road_says_no" checked> Road says no</label>

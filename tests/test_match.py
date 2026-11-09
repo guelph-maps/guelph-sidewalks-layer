@@ -92,6 +92,37 @@ def test_a_line_20_m_off_is_far():
     assert _status(_city(), osm) == "far"
 
 
+def _across(osm_dy, other_dy):
+    """Statuses of a City sidewalk at y=0 and one at ``other_dy``, OSM at ``osm_dy``."""
+    osm = _osm(sidewalk=[_way(1, _beside(osm_dy), highway="footway",
+                              footway="sidewalk", surface="concrete")])
+    here, there = _city(), _city(dy=other_dy, id=8)
+    gaps, _summary = compare.match([here, there], osm)
+    return {g["properties"]["id"]: g["properties"]["status"] for g in gaps}
+
+
+def test_the_sidewalk_across_the_street_is_not_far():
+    # OSM has only the far side, already matched by the City line there: this
+    # side is missing, not a misaligned copy of it.
+    assert _across(osm_dy=20, other_dy=21) == {7: "missing"}
+
+
+def test_the_sidewalk_across_a_narrow_street_does_not_cover_this_one():
+    # Within MATCH_M of both, but it is the other City line's, 1 m from it.
+    assert _across(osm_dy=11, other_dy=12) == {7: "missing"}
+
+
+def test_a_line_between_two_close_city_lines_covers_both():
+    # 2 m from one, 3 m from the other: within the City's own accuracy, so
+    # neither is clearly nearer and neither steals it.
+    assert _across(osm_dy=3, other_dy=5) == {}
+
+
+def test_a_far_line_no_other_city_line_matches_is_still_far():
+    # The other City line is 20 m from it too: neither has claimed it.
+    assert _across(osm_dy=20, other_dy=40) == {7: "far", 8: "far"}
+
+
 def test_a_road_saying_sidewalk_no_is_road_says_no():
     road = _way(42, _beside(10), highway="residential", sidewalk="no")
     gaps, summary = compare.match([_city()], _osm(road=[road]))

@@ -104,6 +104,12 @@ SAMPLE_STEP_M = 5.0
 MATCH_M = 15.0
 FAR_M = 25.0
 ROAD_TAG_M = 20.0
+# A pedestrian line belongs to another City sidewalk -- and covers this one
+# neither as a match nor as "far" -- when that sidewalk is within MATCH_M of
+# it and at least this much nearer. The margin keeps two City lines a metre or
+# two apart (both inside the City's own 1-5 m accuracy) from stealing a line
+# from each other.
+CLAIM_MARGIN_M = 3.0
 # Beyond this, nothing in OSM is anywhere near: reported as its own figure,
 # the part of the gap no alignment argument can explain away.
 REMOTE_M = 50.0

@@ -13,6 +13,12 @@ OSM has beside each sample. The first answer that applies wins:
   far       nothing above, but a pedestrian line within FAR_M
   none      nothing at all
 
+A pedestrian line only answers for a sample if it is not another City
+sidewalk's: one lying within MATCH_M of the line, at its point nearest the
+sample, and CLAIM_MARGIN_M nearer to that point than the sample is. That is
+the sidewalk across the street, already matched by the City line on its side;
+without the check it would cover a narrow street's other side, or call it far.
+
 The first four are "covered". A City segment's status is then decided by how
 much of its length is covered (length-weighted, so a long segment counts for
 what it is):
@@ -87,7 +93,7 @@ def compare():
     with open(config.GAPS_COUNT_PATH, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
     print(f"Untraced: {summary['untraced_km']} km of {summary['city_km']} km "
-          f"built ({summary['far_km']} km of it 15-25 m from an OSM line, "
+          f"built ({summary['far_km']} km of it 15-25 m from an unclaimed OSM line, "
           f"{summary['remote_km']} km with nothing within "
           f"{config.REMOTE_M:.0f} m); {summary['streets']} streets with "
           f">= {config.STREET_MIN_KM} km")
@@ -342,7 +348,7 @@ def match(city, osm):
     ``osm`` is {"sidewalk"|"other"|"road": [{"id", "tags", "g"}]}.
     """
     pts, weights, owner = _sample(city)
-    cls, way = classify(pts, osm)
+    cls, way = classify(pts, osm, _claimer(owner, city))
 
     # Every sample is attributed to the nearest named road, so each listed
     # segment can be filed under a street.
@@ -433,15 +439,19 @@ def _sample(city):
     return np.array(pts, dtype=object), np.array(weights), np.array(owner)
 
 
-def classify(pts, osm):
-    """One SAMPLE_CLASSES value per point, plus the OSM way id behind it."""
+def classify(pts, osm, claimed=None):
+    """One SAMPLE_CLASSES value per point, plus the OSM way id behind it.
+
+    ``claimed`` (from _claimer) skips pedestrian lines another City sidewalk
+    has; without it every line answers for every sample.
+    """
     sw = osm["sidewalk"]
     ot = osm["other"]
     rd = osm["road"]
-    i_sw, _ = _nearest(pts, [w["g"] for w in sw], config.MATCH_M)
-    i_ot, _ = _nearest(pts, [w["g"] for w in ot], config.MATCH_M)
+    i_sw = _nearest_free(pts, [w["g"] for w in sw], config.MATCH_M, claimed)
+    i_ot = _nearest_free(pts, [w["g"] for w in ot], config.MATCH_M, claimed)
     i_rd, _ = _nearest(pts, [w["g"] for w in rd], config.ROAD_TAG_M)
-    i_far, _ = _nearest(pts, [w["g"] for w in sw + ot], config.FAR_M)
+    i_far = _nearest_free(pts, [w["g"] for w in sw + ot], config.FAR_M, claimed)
     rd_says = [road_sidewalk(w["tags"]) for w in rd]
 
     cls = np.empty(len(pts), dtype=object)
@@ -462,6 +472,51 @@ def classify(pts, osm):
         else:
             cls[k] = "none"
     return cls, way
+
+
+def _claimer(owner, city):
+    """A test of (sample index, sample point, OSM line) pairs: is the line
+    another City sidewalk's? See the module docstring for the rule."""
+    lines = [ln for c in city for ln in c["lines"]]
+    if not lines:
+        return None
+    line_owner = np.array([i for i, c in enumerate(city) for _ in c["lines"]])
+    line_geom = np.array(lines, dtype=object)
+    tree = shapely.STRtree(lines)
+
+    def claimed(k, p, g):
+        q = shapely.line_interpolate_point(g, shapely.line_locate_point(g, p))
+        reach = shapely.distance(q, p)
+        qi, li = tree.query(q, predicate="dwithin", distance=config.MATCH_M)
+        other = line_owner[li] != owner[k][qi]
+        qi, li = qi[other], li[other]
+        nearer = (shapely.distance(q[qi], line_geom[li]) + config.CLAIM_MARGIN_M
+                  < reach[qi])
+        out = np.zeros(len(q), dtype=bool)
+        out[qi[nearer]] = True
+        return out
+
+    return claimed
+
+
+def _nearest_free(pts, geoms, maxd, claimed):
+    """Index into geoms of each point's nearest unclaimed within maxd, else -1."""
+    if claimed is None:
+        return _nearest(pts, geoms, maxd)[0]
+    idx = np.full(len(pts), -1)
+    if not geoms or not len(pts):
+        return idx
+    g = np.array(geoms, dtype=object)
+    pi, wi = shapely.STRtree(geoms).query(pts, predicate="dwithin",
+                                          distance=maxd)
+    free = ~claimed(pi, pts[pi], g[wi])
+    pi, wi = pi[free], wi[free]
+    d = shapely.distance(pts[pi], g[wi])
+    order = np.lexsort((d, pi))      # by point, nearest first
+    pi, wi = pi[order], wi[order]
+    first = np.r_[True, pi[1:] != pi[:-1]] if len(pi) else np.zeros(0, bool)
+    idx[pi[first]] = wi[first]
+    return idx
 
 
 def segment_status(lengths, built, surfaced=1.0):

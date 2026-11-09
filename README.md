@@ -31,8 +31,15 @@ ratio. Measured by location, on the first run here (2026-10-09):
   (Deerpath Dr 3.2 km, Woodland Glen Dr 2.2, Pinnacle Cres 1.8), then West
   Acres Dr 2.7 and Freshmeadow Way 1.9.
 - The City states 1–5 m accuracy on 5,241 of its 5,245 rows, and 8.8 km of the
-  untraced length sits 15–25 m from an OSM line, where an offset is a likelier
-  story than a missing way. So the honest headline is **~60–75 km**.
+  untraced length sat 15–25 m from an OSM line, where an offset seemed a
+  likelier story than a missing way. So the honest headline was **~60–75 km**.
+- **Corrected 2026-11-09:** nearly all of that 8.8 km, and more besides, was
+  the sidewalk across the street: an OSM line already matched by the City
+  sidewalk on its own side, counted for this one as "far" or, on a narrow
+  street, as a match. A line now counts for a City sidewalk only when no
+  other City sidewalk is clearly nearer to it. On the 2026-11-07 data that
+  takes the untraced length from 70.4 to **80.0 km** and leaves 0.9 km "far",
+  so the honest headline is **~75–80 km**.
 
 Guelph already maps sidewalks as separate ways (4,512 `footway=sidewalk` ways,
 against 237 roads with a positive `sidewalk=*`), so tracing them follows the
@@ -55,8 +62,8 @@ local convention; there is no tagging question to settle first.
   enabled). Segment statuses:
   - **missing** &mdash; under 20% covered: add it;
   - **partial** &mdash; 20–70% covered: finish it;
-  - **far** &mdash; an OSM line 15–25 m away: check the alignment before
-    adding anything;
+  - **far** &mdash; an OSM line 15–25 m away that no other City sidewalk
+    matches: check the alignment before adding anything;
   - **road_says_no** &mdash; the OSM road says `sidewalk=no` where the City
     has one (2.7 km, most of it on Whitelaw Rd);
   - **untagged** &mdash; covered by a plain `highway=footway`: tag it
@@ -93,6 +100,11 @@ of ~5 m and each piece's midpoint asks, in this order:
 4. that road saying `sidewalk=no` &mdash; a contradiction;
 5. a pedestrian line 15–25 m away &mdash; far;
 6. nothing.
+
+A pedestrian line is skipped in 1, 2 and 5 when it is another City
+sidewalk's: that sidewalk is within 15 m of it and at least 3 m nearer than
+this one. That is the sidewalk across the street, already matched on its own
+side.
 
 A segment is matched at ≥70% covered (by length), partial at 20–70%, and a
 gap below that, named by what most of its uncovered length has near it. The
