@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src import config, history  # noqa: E402
+from src import config, history, site  # noqa: E402
 
 
 @pytest.fixture
@@ -30,13 +30,15 @@ def test_a_live_run_is_recorded_with_every_field(paths):
     assert row == {"date": "2026-10-08", "osm_date": "2026-10-08 12:00Z",
                    "source": "live", "untraced_km": 41.3, "missing": 520,
                    "partial": 140, "far": 60, "road_says_no": 12,
-                   "untagged": 230, "streets": 88, "city_km": 712.4}
+                   "untagged": 230, "on_road_tag": 4, "streets": 88,
+                   "city_km": 712.4}
     assert history.load() == [row]
 
 
 def test_the_row_carries_exactly_the_fields():
     assert history.FIELDS == ("untraced_km", "missing", "partial", "far",
-                              "road_says_no", "untagged", "streets", "city_km")
+                              "road_says_no", "untagged", "on_road_tag",
+                              "streets", "city_km")
 
 
 def test_an_absent_field_is_recorded_as_zero(paths):
@@ -132,3 +134,12 @@ def test_seed_survives_no_network(seed_paths, monkeypatch):
 
     monkeypatch.setattr(history.requests, "get", offline)
     assert history.seed() is False
+
+
+def test_a_count_an_older_row_lacks_shows_as_a_dash_not_zero():
+    old = {"date": "2026-10-01", "source": "live", "untraced_km": 70.4,
+           "missing": 318, "partial": 105, "far": 23, "road_says_no": 21,
+           "untagged": 33, "streets": 100, "city_km": 715.9}
+    cells = site._history_row(old).split("</td><td>")
+    assert cells[history.FIELDS.index("on_road_tag") + 1] == "&ndash;"
+    assert cells[history.FIELDS.index("untagged") + 1] == "33"

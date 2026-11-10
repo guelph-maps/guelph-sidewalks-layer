@@ -26,8 +26,9 @@ what it is):
   covered >= MATCHED_SHARE   matched. Listed only when the cover is the wrong
                              kind -- mostly a plain footway ("untagged": tag
                              it footway=sidewalk), mostly a road tag
-                             ("on_road_tag", off by default: a valid way to map
-                             it), or mostly sidewalk ways with no surface=*
+                             ("on_road_tag": draw it as its own way, then set
+                             the road to sidewalk:<side>=separate), or mostly
+                             sidewalk ways with no surface=*
                              ("nosurface", off by default: low value).
   covered >= PARTIAL_SHARE   "partial": part of it is traced.
   less                       a gap, named by what most of its uncovered length

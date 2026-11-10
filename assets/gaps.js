@@ -15,12 +15,12 @@
                   "on_road_tag", "proposed", "nosurface"];
   var COLORS = {
     missing: "#c2255c", partial: "#f08c00", far: "#7048e8",
-    road_says_no: "#e03131", untagged: "#1c7ed6", on_road_tag: "#868e96",
+    road_says_no: "#e03131", untagged: "#1c7ed6", on_road_tag: "#2f9e44",
     proposed: "#e8590c", nosurface: "#ced4da",
   };
   var LABELS = {
     missing: "missing", partial: "partial", far: "far",
-    road_says_no: "road says no", untagged: "untagged", on_road_tag: "on road tag",
+    road_says_no: "road says no", untagged: "untagged", on_road_tag: "road tag only",
     proposed: "proposed", nosurface: "no surface",
   };
   // A street's total counts only these: untraced length a mapper can add.
@@ -242,7 +242,7 @@
     switch (f.properties.status) {
       case "untagged": return "The plain footway to tag footway=sidewalk";
       case "road_says_no": return "The road tagged sidewalk=no";
-      case "on_road_tag": return "The road carrying sidewalk=*";
+      case "on_road_tag": return "The road to set to sidewalk:<side>=separate once the sidewalk is drawn";
       case "nosurface": return "The sidewalk way with no surface=*";
       default: return "The OSM way this status is about";
     }

@@ -17,6 +17,7 @@
     { key: "far", label: "Far", short: "far", color: "#7048e8" },
     { key: "road_says_no", label: "Road says no", short: "says no", color: "#e03131" },
     { key: "untagged", label: "Untagged footway", short: "untagged", color: "#1c7ed6" },
+    { key: "on_road_tag", label: "Road tag only", short: "road tag", color: "#2f9e44" },
   ];
   var W = 860, H = 320;
   var M = { top: 16, right: 150, bottom: 36, left: 48 };
@@ -105,14 +106,18 @@
     });
 
     // Lines, then points (a 2px surface ring keeps them legible where they cross).
+    // A row without the key predates that count: no point, not a zero.
     series.forEach(function (s) {
-      var d = rows.map(function (r, i) {
-        return (i ? "L" : "M") + sx(xs[i]).toFixed(1) + " " + sy(r[s.key] || 0).toFixed(1);
-      }).join(" ");
-      svg.appendChild(el("path", { "class": "series", d: d, stroke: s.color }));
+      var d = "";
+      rows.forEach(function (r, i) {
+        if (r[s.key] == null) { return; }
+        d += (d ? " L" : "M") + sx(xs[i]).toFixed(1) + " " + sy(r[s.key]).toFixed(1);
+      });
+      if (d) { svg.appendChild(el("path", { "class": "series", d: d, stroke: s.color })); }
     });
     series.forEach(function (s) {
       rows.forEach(function (r, i) {
+        if (r[s.key] == null) { return; }
         svg.appendChild(el("circle", { "class": "pt", r: 4, fill: s.color,
           cx: sx(xs[i]), cy: sy(r[s.key] || 0) }));
       });
@@ -120,7 +125,7 @@
 
     // Direct end labels: the latest value of each series, nudged apart.
     var last = rows[rows.length - 1];
-    var ends = series.map(function (s) {
+    var ends = series.filter(function (s) { return last[s.key] != null; }).map(function (s) {
       return { s: s, y: sy(last[s.key] || 0), v: last[s.key] || 0 };
     }).sort(function (a, b) { return a.y - b.y; });
     for (var i = 1; i < ends.length; i++) {
@@ -169,7 +174,7 @@
         var key = document.createElement("i");
         key.style.borderColor = s.color;
         var val = document.createElement("strong");
-        val.textContent = fmtV(r[s.key] || 0);
+        val.textContent = r[s.key] == null ? "–" : fmtV(r[s.key]);
         line.appendChild(key);
         line.appendChild(val);
         line.appendChild(document.createTextNode(" " + s.short));

@@ -113,8 +113,12 @@
   <li>Guelph maps its sidewalks as separate ways
       (<code>highway=footway</code> + <code>footway=sidewalk</code>), not as
       <code>sidewalk=*</code> tags on the road, so tracing from this layer
-      follows the local convention. Where a road already carries
-      <code>sidewalk=*</code>, that is a valid way to map it too.</li>
+      follows the local convention. A road that carries only
+      <code>sidewalk=*</code> is not wrong, but a sidewalk behind a curb is
+      worth drawing as its own way: it gets crossings, kerbs, width and
+      surface. Once it is drawn, set the road to
+      <code>sidewalk:both=separate</code> (or <code>:left</code> /
+      <code>:right</code>) so routers do not count it twice.</li>
   <li>Tracing a sidewalk at a time from imagery, with this layer as a guide,
       is ordinary mapping. Copying the City's lines into OSM by script would
       be an import, and needs an import proposal and community discussion

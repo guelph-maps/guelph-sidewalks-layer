@@ -32,6 +32,7 @@
     <div class="count far"><strong>{{FAR_COUNT}}</strong><span>far</span></div>
     <div class="count road_says_no"><strong>{{SAYS_NO_COUNT}}</strong><span>road says no</span></div>
     <div class="count untagged"><strong>{{UNTAGGED_COUNT}}</strong><span>untagged footway</span></div>
+    <div class="count on_road_tag"><strong>{{ON_ROAD_COUNT}}</strong><span>road tag only</span></div>
     <div class="count"><strong>{{CITY_KM}} km</strong><span>City sidewalk built</span></div>
     <div class="count"><strong>{{OSM_COUNT}}</strong><span>OSM sidewalk ways</span></div>
     <div class="count meta-count">City data {{DATA_DATE}} &middot; OSM data {{OSM_DATE}} &middot; compared {{BUILD_DATE}}</div>
@@ -71,8 +72,8 @@
           <input type="checkbox" id="show-road_says_no" checked> Road says no</label>
         <label title="Covered by a plain highway=footway: tag it footway=sidewalk"><span class="swatch untagged"></span>
           <input type="checkbox" id="show-untagged" checked> Untagged</label>
-        <label title="Mapped as sidewalk=* on the road: a valid way to map it ({{ON_ROAD_COUNT}} segments)"><span class="swatch on_road_tag"></span>
-          <input type="checkbox" id="show-on_road_tag"> On road tag</label>
+        <label title="Only a sidewalk=* tag on the road: draw it as its own way, then set the road to sidewalk:&lt;side&gt;=separate"><span class="swatch on_road_tag"></span>
+          <input type="checkbox" id="show-on_road_tag" checked> Road tag only</label>
         <label title="City status PROPOSED: may not be poured yet ({{PROPOSED_COUNT}} segments)"><span class="swatch proposed"></span>
           <input type="checkbox" id="show-proposed"> Proposed</label>
         <label title="Matched sidewalk way with no surface=* ({{NOSURFACE_COUNT}} segments)"><span class="swatch nosurface"></span>

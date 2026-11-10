@@ -21,7 +21,7 @@ import requests
 from src import config
 
 FIELDS = ("untraced_km", "missing", "partial", "far", "road_says_no", "untagged",
-          "streets", "city_km")
+          "on_road_tag", "streets", "city_km")
 
 
 def record(summary, day=None):

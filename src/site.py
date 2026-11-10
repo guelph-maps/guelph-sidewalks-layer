@@ -197,7 +197,9 @@ def _build_history_page(gaps_dir, build_date):
 
 def _history_row(r):
     source = "reconstructed" if r.get("source") == "attic" else "live"
-    cells = [r["date"]] + [f"{r.get(k, 0):,}" for k in history.FIELDS] + [source]
+    # A field missing from an older row was not counted then: a dash, not 0.
+    cells = ([r["date"]] + [f"{r[k]:,}" if k in r else "&ndash;" for k in history.FIELDS]
+             + [source])
     return "<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>"
 
 

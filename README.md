@@ -43,7 +43,12 @@ ratio. Measured by location, on the first run here (2026-10-09):
 
 Guelph already maps sidewalks as separate ways (4,512 `footway=sidewalk` ways,
 against 237 roads with a positive `sidewalk=*`), so tracing them follows the
-local convention; there is no tagging question to settle first.
+local convention; there is no tagging question to settle first. A road that
+carries only `sidewalk=*` is listed as **on_road_tag**, an upgrade rather than
+an error: the sidewalk sits behind a curb, so it is worth its own way, after
+which the road becomes `sidewalk:<side>=separate`. (Painted bike lanes are the
+opposite case: part of the carriageway, so `cycleway=lane` on the road is the
+norm.)
 
 ## What it produces
 
@@ -68,8 +73,10 @@ local convention; there is no tagging question to settle first.
     has one (2.7 km, most of it on Whitelaw Rd);
   - **untagged** &mdash; covered by a plain `highway=footway`: tag it
     `footway=sidewalk`;
-  - off by default: **on_road_tag** (mapped as `sidewalk=*` on the road, a
-    valid way to map it), **proposed** (City status PROPOSED, may not be
+  - **on_road_tag** &mdash; covered only by `sidewalk=*` on the road: draw
+    it as its own way, then set the road to `sidewalk:<side>=separate`. Not
+    counted in the untraced km, since OSM does say the sidewalk is there;
+  - off by default: **proposed** (City status PROPOSED, may not be
     poured), **nosurface** (a matched sidewalk way with no `surface=*`; the
     City's are 99% concrete, so low value).
 
