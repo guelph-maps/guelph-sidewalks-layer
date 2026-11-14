@@ -33,6 +33,14 @@ body.app { margin: 0; display: flex; flex-direction: column; }
 }
 .count strong { font-size: 1.15rem; margin-right: .35rem; }
 .count span { color: var(--muted); font-size: .82rem; }
+.count small {
+  display: block;
+  max-width: 15rem;
+  margin-top: .15rem;
+  color: var(--muted);
+  font-size: .72rem;
+}
+.count small code { padding: 0; background: none; font-size: inherit; }
 /* Status colours: the same palette as the map's lines (COLORS in gaps.js). */
 .count.headline { border-left: 4px solid #c2255c; }
 .count.headline strong { font-size: 1.35rem; }

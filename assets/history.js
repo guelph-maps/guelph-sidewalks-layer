@@ -16,7 +16,7 @@
     { key: "partial", label: "Partial", short: "partial", color: "#f08c00" },
     { key: "far", label: "Far", short: "far", color: "#7048e8" },
     { key: "road_says_no", label: "Road says no", short: "says no", color: "#e03131" },
-    { key: "untagged", label: "Untagged footway", short: "untagged", color: "#1c7ed6" },
+    { key: "untagged", label: "Not tagged sidewalk", short: "not tagged", color: "#1c7ed6" },
     { key: "on_road_tag", label: "Road tag only", short: "road tag", color: "#2f9e44" },
   ];
   var W = 860, H = 320;

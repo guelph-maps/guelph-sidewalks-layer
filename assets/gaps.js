@@ -20,7 +20,7 @@
   };
   var LABELS = {
     missing: "missing", partial: "partial", far: "far",
-    road_says_no: "road says no", untagged: "untagged", on_road_tag: "road tag only",
+    road_says_no: "road says no", untagged: "not tagged sidewalk", on_road_tag: "road tag only",
     proposed: "proposed", nosurface: "no surface",
   };
   // A street's total counts only these: untraced length a mapper can add.
