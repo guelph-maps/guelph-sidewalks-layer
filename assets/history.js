@@ -39,7 +39,7 @@
     if (!rows.length) {
       var p = document.createElement("p");
       p.className = "empty";
-      p.textContent = "No comparisons recorded yet. The first weekly build " +
+      p.textContent = "No comparisons recorded yet. The first build " +
         "adds a point.";
       holder.appendChild(p);
       return;

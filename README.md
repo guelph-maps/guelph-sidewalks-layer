@@ -3,7 +3,7 @@
 Turns the City of Guelph [Sidewalks](https://gismaps.guelph.ca/hosting/rest/services/OpenData/OpenData2/FeatureServer/0)
 layer (~5,245 lines, 716 km built) into map-tile layers that OpenStreetMap
 mappers can add to the **JOSM** and **iD** editors as a reference overlay, and
-a weekly page listing the City sidewalks OSM has no line for, street by
+a daily page listing the City sidewalks OSM has no line for, street by
 street.
 
 **Live layer and how to add it: https://guelph-maps.github.io/guelph-sidewalks-layer/**
@@ -81,9 +81,9 @@ norm.)
     City's are 99% concrete, so low value).
 
   Its [history page](https://guelph-maps.github.io/guelph-sidewalks-layer/gaps/history.html)
-  charts the untraced length and the counts, one point per weekly run.
+  charts the untraced length and the counts, one point per daily run.
 
-All of it is published to GitHub Pages and rebuilt weekly.
+All of it is published to GitHub Pages and rebuilt daily.
 
 ## What is kept
 
@@ -142,7 +142,7 @@ The City's service caps a reply at 1,000 rows, so unlike its siblings the
 download pages through the layer, and refuses to save if the total differs
 from the service's own count.
 
-There is no `backfill` command; the history starts with the first weekly
+There is no `backfill` command; the history starts with the first
 build.
 
 ## Setup
@@ -182,7 +182,7 @@ in ~20 s.
 ## Scheduling (Windows)
 
 ```powershell
-.\schedule-add.ps1       # registers a weekly task "kk-GuelphSidewalksLayer", Saturdays 16:30
+.\schedule-add.ps1       # registers a daily task "kk-GuelphSidewalksLayer", 21:15
 .\schedule-remove.ps1    # unregisters it
 ```
 
