@@ -151,8 +151,10 @@ build.
    ```
    pip install -r requirements.txt
    ```
-   `addressvault` is the local link-gate package the sibling projects share; it
-   is not on PyPI. Unlike its siblings this project needs **shapely 2, numpy
+   `addressvault` (the link gate) and
+   [`layerkit`](https://github.com/skfd/layer-kit) (the Overpass, history and
+   publish plumbing) are local packages the sibling projects share; neither is
+   on PyPI, so clone each and `pip install -e` it first. Unlike its siblings this project needs **shapely 2, numpy
    and pyproj**: matching ~143,000 five-metre samples against ~30,000 OSM ways
    wants a spatial index and a metric projection, which the polygon siblings
    could hand-roll and a line matcher cannot cheaply.
