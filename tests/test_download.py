@@ -296,3 +296,35 @@ def test_out_of_retries_on_a_good_link_reraises_the_request_error(setup, monkeyp
     monkeypatch.setattr("src.download.requests.get", get)
     with pytest.raises(requests.ConnectionError):
         dl.download()
+
+
+def _reissuing(get):
+    """``get``, but every row comes back with a fresh GlobalID, as the live
+    service hands out on every request."""
+    import uuid
+
+    def wrapped(url, params=None, headers=None, timeout=None):
+        resp = get(url, params=params, headers=headers, timeout=timeout)
+        if isinstance(resp.payload, dict):
+            for f in resp.payload.get("features") or ():
+                f["properties"][dl.UNSTABLE_FIELDS[0]] = "{%s}" % uuid.uuid4()
+        return resp
+    return wrapped
+
+
+def test_a_reissued_globalid_alone_is_not_a_change(setup, monkeypatch):
+    # Kept in the hash, it changed every run and dated the City data to the
+    # last build rather than the last edit.
+    monkeypatch.setattr("src.download.requests.get", _reissuing(service(rows=7)))
+    _status, first_path = dl.download()
+    assert dl.download() == ("SKIPPED", first_path)
+    with open(first_path, encoding="utf-8") as f:
+        saved = json.load(f)["features"]
+    assert all(dl.UNSTABLE_FIELDS[0] in r["properties"] for r in saved)
+
+
+def test_a_real_change_is_seen_through_a_reissued_globalid(setup, monkeypatch):
+    monkeypatch.setattr("src.download.requests.get", _reissuing(service(rows=7)))
+    dl.download()
+    monkeypatch.setattr("src.download.requests.get", _reissuing(service(rows=8)))
+    assert dl.download()[0] == "DOWNLOADED"

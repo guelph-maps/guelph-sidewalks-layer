@@ -10,7 +10,8 @@ otherwise drop a stretch of sidewalk from the overlay and add it to nothing.
 
 An ArcGIS `/query` endpoint has no Last-Modified worth reading -- it is
 generated per request -- so what is compared between runs is a **sha256 of
-the assembled features**. Identical hash means the City has not touched the
+the assembled features**. The hash leaves out the GLOBALID the service reissues on
+every request. Identical hash means the City has not touched the
 layer, and the existing dated file is kept, which keeps DATA_DATE meaning
 "when the City data last changed" rather than "when the build last ran".
 
@@ -18,7 +19,6 @@ Every request is gated on a usable link first (``addressvault.net``, the same
 gate the sibling layers pull behind).
 """
 
-import hashlib
 import json
 import os
 import time
@@ -26,6 +26,7 @@ from datetime import date
 
 import requests
 from addressvault import net
+from layerkit import citydata
 
 from src import config
 
@@ -33,6 +34,11 @@ from src import config
 # is healthy and buys back a week when it is not.
 RETRIES = 3
 RETRY_WAIT = 30
+
+# Left out of the hash, not out of the file. The service makes GLOBALID up afresh
+# for every row each time it is asked, so a hash that kept it changed on every
+# run and dated the City data to the last build instead of the last edit.
+UNSTABLE_FIELDS = ("GLOBALID",)
 
 
 def download(force=False):
@@ -67,7 +73,7 @@ def download(force=False):
 
     body = json.dumps({"type": "FeatureCollection", "features": features},
                       separators=(",", ":")).encode("utf-8")
-    digest = hashlib.sha256(body).hexdigest()
+    digest = citydata.digest(features, ignore=UNSTABLE_FIELDS)
 
     sidecar = _load_sidecar()
     if not force and sidecar and sidecar.get("sha256") == digest:
