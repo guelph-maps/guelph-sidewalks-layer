@@ -8,7 +8,7 @@ if (-not (Test-Path "$projectDir\logs")) {
 
 $action = New-ScheduledTaskAction `
     -Execute "cmd.exe" `
-    -Argument "/c cd /d `"$projectDir`" && python run.py update >> `"$logFile`" 2>&1"
+    -Argument "/c `"`"$projectDir\run-scheduled.cmd`" >> `"$logFile`" 2>&1`""
 
 # Daily, though the City adds only ~2 km of sidewalk a year: what moves is the
 # gap page, which diffs against live OSM, and a day-old page is what mappers
@@ -22,16 +22,12 @@ $action = New-ScheduledTaskAction `
 # either hour would land on all of them. 21:15 is clear of the 19:30 retries
 # (last at 21:00) and its own retries end by 22:45.
 $trigger  = New-ScheduledTaskTrigger -Daily -At "21:15"
-# Restart on failure. 'update' exits 75 as soon as it sees no usable link
-# instead of blocking on one (the ExecutionTimeLimit would kill a long wait
-# anyway), so three tries half an hour apart turn a dead link at 21:15 into a
-# run by 22:45 rather than a day's gap. Still clear of the 23:00 quiet window.
-#
-# It also exits 70 when no Overpass mirror answered and the gap page had to fall
-# back to cached OSM. That publishes first, so the retry costs a rebuild and not
-# the tiles; without it, two 504s in Aug 2026 left the page a fortnight stale
-# with the task reporting success both times.
-$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2) -StartWhenAvailable `
+# Retries live in run-scheduled.cmd, not here: 'update' exits 75 when it sees no
+# usable link, and 70 when no Overpass mirror answered and the gap page fell back
+# to cached OSM (published first). The wrapper tries either again up to twice, half
+# an hour apart, and the 3-hour limit leaves room for that. RestartCount covers only
+# a launch that fails; Task Scheduler never re-runs on an exit code.
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 3) -StartWhenAvailable `
     -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 30)
 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Force
