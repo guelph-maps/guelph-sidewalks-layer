@@ -2,7 +2,7 @@
 
 The vector tile step (`python run.py vector`) builds Mapbox Vector Tiles with
 **tippecanoe**, which has no native Windows build. It runs inside WSL2 / Ubuntu.
-This is a one-time setup; after it, the daily build drives WSL automatically.
+This is a one-time setup; after it, the weekly build drives WSL automatically.
 
 ## 1. Install WSL2 (skip if already installed)
 

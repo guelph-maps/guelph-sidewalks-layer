@@ -2,7 +2,7 @@
 
 Each live comparison appends one line to data/history.jsonl: the date, which
 OSM data it saw, and the counts from the summary. That is the whole record of
-the observer -- a handful of numbers a day -- and gaps/history.html charts it.
+the observer -- a handful of numbers a week -- and gaps/history.html charts it.
 A run that fell back to cached OSM observed nothing new and is not recorded,
 so the chart never shows a false plateau.
 
